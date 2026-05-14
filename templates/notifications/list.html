@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-bell txt-green me-2"></i>Notifications</h1>
+        <div class="breadcrumb">
+          <a href="{% url 'home' %}">Accueil</a><span>/</span>Notifications
+          {% with total=notifications|length %}
+            {% if total %}<span>/ <strong style="color:var(--green);">{{ total }}</strong></span>{% endif %}
+          {% endwith %}
+        </div>
+      </div>
+      <form method="post" action="{% url 'notifications:mark_all_read' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm" style="border-color:var(--green);color:var(--green);">
+          <i class="fa-solid fa-check-double me-1"></i> Tout marquer comme lu
+        </button>
+      </form>
+    </div>
+
+    {% if notifications %}
+    <div class="table-wrap">
+      {% for notif in notifications %}
+      <a href="{{ notif.link|default:'#' }}" class="nli {% if not notif.is_read %}nli-unread{% endif %}">
+
+        <div class="nli-icon nit-{{ notif.notif_type }}">
+          {% if notif.notif_type == 'order_placed' %}
+            <i class="fa-solid fa-bag-shopping"></i>
+          {% elif notif.notif_type == 'order_confirmed' %}
+            <i class="fa-solid fa-circle-check"></i>
+          {% elif notif.notif_type == 'order_cancelled' %}
+            <i class="fa-solid fa-circle-xmark"></i>
+          {% elif notif.notif_type == 'order_shipped' %}
+            <i class="fa-solid fa-truck"></i>
+          {% elif notif.notif_type == 'order_delivered' %}
+            <i class="fa-solid fa-house-circle-check"></i>
+          {% elif notif.notif_type == 'expiry_alert' %}
+            <i class="fa-solid fa-hourglass-half"></i>
+          {% elif notif.notif_type == 'stock_warning' %}
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          {% elif notif.notif_type == 'negotiation_offer' %}
+            <i class="fa-solid fa-handshake"></i>
+          {% elif notif.notif_type == 'negotiation_accepted' %}
+            <i class="fa-solid fa-handshake-simple"></i>
+          {% elif notif.notif_type == 'negotiation_rejected' %}
+            <i class="fa-solid fa-handshake-slash"></i>
+          {% elif notif.notif_type == 'negotiation_counter' %}
+            <i class="fa-solid fa-rotate"></i>
+          {% elif notif.notif_type == 'new_registration' %}
+            <i class="fa-solid fa-user-plus"></i>
+          {% elif notif.notif_type == 'new_offer' %}
+            <i class="fa-solid fa-tag"></i>
+          {% else %}
+            <i class="fa-solid fa-circle-info"></i>
+          {% endif %}
+        </div>
+
+        <div class="nli-body">
+          <div class="nli-title">{{ notif.title }}</div>
+          {% if notif.body %}
+          <div class="nli-sub">{{ notif.body }}</div>
+          {% endif %}
+          <div class="nli-date">
+            <i class="fa-regular fa-clock me-1"></i>{{ notif.created_at|date:"d/m/Y à H:i" }}
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          {% if not notif.is_read %}
+          <div class="nli-dot"></div>
+          {% endif %}
+          <span class="badge {% if notif.notif_type == 'order_cancelled' or notif.notif_type == 'negotiation_rejected' %}badge-red{% elif notif.notif_type == 'order_confirmed' or notif.notif_type == 'order_delivered' or notif.notif_type == 'negotiation_accepted' %}badge-green{% elif notif.notif_type == 'expiry_alert' or notif.notif_type == 'stock_warning' %}badge-gold{% elif 'negotiation' in notif.notif_type %}badge-blue{% elif notif.notif_type == 'new_registration' %}badge-blue{% else %}badge-gray{% endif %}" style="font-size:.65rem;">
+            {{ notif.get_notif_type_display }}
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="margin-top:32px;">
+      <div class="empty-state-icon">
+        <i class="fa-regular fa-bell-slash" style="font-size:2.2rem;color:var(--green);"></i>
+      </div>
+      <h4 class="empty-state-title">Aucune notification</h4>
+      <p class="empty-state-sub">
+        Vos notifications apparaîtront ici : commandes, alertes de stock, négociations et bien plus.
+      </p>
+      <a href="{% url 'products:catalog' %}" class="btn btn-primary btn-md">
+        <i class="fa-solid fa-tag me-1"></i> Explorer les offres
+      </a>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+
+<style>
+.nli {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none; color: var(--text);
+  transition: background .12s;
+}
+.nli:last-child { border-bottom: none; }
+.nli:hover { background: var(--surface-2); }
+.nli-unread { background: var(--green-xl); border-left: 3px solid var(--green); }
+.nli-unread:hover { background: #d4edda; }
+
+.nli-icon {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  background: var(--surface-3); color: var(--text-lt);
+}
+.nit-order_placed,
+.nit-order_confirmed   { background: rgba(26,107,47,.12);  color: #1A6B2F; }
+.nit-order_cancelled   { background: rgba(220,38,38,.1);   color: #DC2626; }
+.nit-order_shipped     { background: rgba(3,105,161,.1);   color: #0369A1; }
+.nit-order_delivered   { background: rgba(22,163,74,.1);   color: #16A34A; }
+.nit-expiry_alert      { background: rgba(217,119,6,.12);  color: #D97706; }
+.nit-stock_warning     { background: rgba(230,80,0,.1);    color: #E65000; }
+.nit-negotiation_offer,
+.nit-negotiation_counter  { background: rgba(124,58,237,.1); color: #7c3aed; }
+.nit-negotiation_accepted { background: rgba(22,163,74,.1);  color: #16A34A; }
+.nit-negotiation_rejected { background: rgba(220,38,38,.1);  color: #DC2626; }
+.nit-new_registration  { background: rgba(3,105,161,.1);   color: #0369A1; }
+.nit-new_offer         { background: rgba(26,107,47,.12);  color: #1A6B2F; }
+
+.nli-body { flex: 1; min-width: 0; }
+.nli-title { font-weight: 700; font-size: .88rem; margin-bottom: 2px; line-height: 1.3; }
+.nli-sub   { font-size: .78rem; color: var(--text-md); line-height: 1.4; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nli-date  { font-size: .7rem; color: var(--text-xl); }
+
+.nli-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+</style>
+{% endblock %}

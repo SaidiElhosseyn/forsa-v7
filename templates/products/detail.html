@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }} — FORSA{% endblock %}
+{% block content %}
+<div class="container-forsa" style="padding-top:22px;padding-bottom:52px;">
+  <!-- Breadcrumb -->
+  <nav style="font-size:.78rem;color:var(--text-lt);margin-bottom:18px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <a href="{% url 'home' %}" style="color:var(--green);">Accueil</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:.6rem;"></i>
+    <a href="{% url 'products:catalog' %}" style="color:var(--green);">Catalogue</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:.6rem;"></i>
+    {% if product.category %}<a href="{% url 'products:catalog' %}?category={{ product.category.slug }}" style="color:var(--green);">{{ product.category.icon }} {{ product.category.name }}</a><i class="fa-solid fa-chevron-right" style="font-size:.6rem;"></i>{% endif %}
+    <span>{{ product.name|truncatechars:40 }}</span>
+  </nav>
+
+  <div class="row g-4">
+    <!-- ══ LEFT: IMAGES ══ -->
+    <div class="col-lg-5">
+      <div style="position:sticky;top:88px;">
+        <!-- Main image -->
+        <div class="detail-img-main" onclick="openLightbox(this.querySelector('img')?.src)">
+          {% if product.images.first %}
+            <img id="mainImg" src="{{ product.images.first.image.url }}" alt="{{ product.name }}">
+          {% else %}
+            <div class="detail-img-placeholder">{{ product.category.icon|default:"📦" }}</div>
+          {% endif %}
+          <!-- Urgency badge -->
+          {% if product.expiry_urgency == 'urgent' %}
+          <span class="badge-date-courte" style="top:12px;left:12px;position:absolute;">
+            <i class="fa-solid fa-fire me-1"></i>Date courte
+          </span>
+          {% elif product.expiry_urgency == 'warning' %}
+          <span class="badge-date-courte" style="top:12px;left:12px;position:absolute;background:var(--gold);">
+            <i class="fa-solid fa-clock me-1"></i>Bientôt
+          </span>
+          {% endif %}
+          <!-- Discount badge -->
+          {% if product.discount_pct > 0 %}
+          <span class="badge-discount" style="top:12px;right:12px;">-{{ product.discount_pct|floatformat:0 }}%</span>
+          {% endif %}
+          <div class="detail-zoom-hint"><i class="fa-solid fa-magnifying-glass-plus me-1"></i>Zoom</div>
+        </div>
+        <!-- Thumbnails -->
+        {% if product.images.count > 1 %}
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          {% for img in product.images.all %}
+          <div class="detail-thumb" onclick="document.getElementById('mainImg').src='{{ img.image.url }}'">
+            <img src="{{ img.image.url }}" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: INFO ══ -->
+    <div class="col-lg-7">
+
+      <!-- Vendor card -->
+      <div class="detail-vendor-card">
+        <div class="detail-vendor-avatar">
+          {% if product.store.logo %}
+            <img src="{{ product.store.logo.url }}" alt="{{ product.store.name }}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          {% else %}
+            <i class="fa-solid fa-shop" style="color:var(--green);font-size:1.2rem;"></i>
+          {% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.9rem;color:var(--text);">{{ product.store.name }}</div>
+          <div style="font-size:.75rem;color:var(--text-lt);display:flex;align-items:center;gap:10px;margin-top:2px;flex-wrap:wrap;">
+            <span><i class="fa-solid fa-star" style="color:var(--gold);font-size:.65rem;"></i> {{ product.store.rating|default:"4.8" }}</span>
+            <span><i class="fa-solid fa-location-dot txt-green" style="font-size:.65rem;"></i> Wilaya {{ product.store.wilaya }}</span>
+          </div>
+        </div>
+        <a href="{% url 'stores:detail' product.store.slug %}" class="btn btn-outline btn-sm" style="flex-shrink:0;font-size:.75rem;padding:5px 12px;">
+          Voir la boutique
+        </a>
+      </div>
+
+      <!-- Product title -->
+      <h1 class="detail-title">{{ product.name }}</h1>
+
+      <!-- Rating row -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="color:var(--gold);font-size:.85rem;">
+          {% for i in "12345" %}<i class="fa-solid fa-star"></i>{% endfor %}
+        </div>
+        <span style="font-size:.8rem;color:var(--text-lt);">{{ product.reviews.count }} avis · {{ product.views_count }} vues · {{ product.sales_count }} vente{{ product.sales_count|pluralize }}</span>
+        {% if product.quantity > 0 %}
+        <span style="font-size:.75rem;font-weight:700;color:var(--success);background:rgba(34,197,94,.1);padding:2px 8px;border-radius:99px;"><i class="fa-solid fa-circle-check me-1"></i>En stock ({{ product.quantity }} {{ product.unit }})</span>
+        {% else %}
+        <span style="font-size:.75rem;font-weight:700;color:var(--danger);background:rgba(220,38,38,.1);padding:2px 8px;border-radius:99px;"><i class="fa-solid fa-circle-xmark me-1"></i>Rupture de stock</span>
+        {% endif %}
+      </div>
+
+      <!-- Price block -->
+      <div class="detail-price-block">
+        <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+          <span class="detail-price-now">{{ product.current_price|floatformat:0 }} <span style="font-size:1rem;font-weight:500;">DA</span></span>
+          {% if product.discount_pct > 0 %}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="detail-price-old">{{ product.original_price|floatformat:0 }} DA</span>
+            <span class="detail-discount-tag">-{{ product.discount_pct|floatformat:0 }}%</span>
+          </div>
+          {% endif %}
+        </div>
+        {% if product.discount_pct > 0 %}
+        <div style="color:var(--success);font-size:.82rem;font-weight:600;margin-top:6px;">
+          <i class="fa-solid fa-piggy-bank me-1"></i>Vous économisez {{ product.savings|floatformat:0 }} DA sur ce produit
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- DLC - Date limite de consommation -->
+      <div class="detail-dlc-box">
+        <div class="detail-dlc-icon">
+          <i class="fa-solid fa-calendar-xmark"></i>
+        </div>
+        <div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Date limite de consommation</div>
+          <div style="font-size:.92rem;font-weight:800;color:var(--text);">Expire le {{ product.expiry_date|date:"d/m/Y" }}</div>
+          <div style="font-size:.75rem;color:var(--text-lt);margin-top:2px;" data-expiry="{{ product.expiry_date|date:'Y-m-d' }}" id="dlcCountdown">...</div>
+        </div>
+      </div>
+
+      <!-- Quantity + CTA -->
+      {% if user.is_authenticated and user.is_customer %}
+      <div class="detail-qty-row">
+        <div class="detail-qty-ctrl">
+          <button class="detail-qty-btn" onclick="changeQty(-1)" type="button">
+            <i class="fa-solid fa-minus"></i>
+          </button>
+          <input id="qtyInput" type="number" value="1" min="1" max="{{ product.quantity }}" class="detail-qty-input" readonly>
+          <button class="detail-qty-btn" onclick="changeQty(1)" type="button">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <a href="{% url 'negotiations:start' product.slug %}" class="btn btn-outline btn-lg detail-btn-reserve" style="flex:1;min-width:120px;justify-content:center;">
+            <i class="fa-solid fa-handshake"></i> Réserver
+          </a>
+          <button onclick="addToCart('{{ product.slug }}',this)" class="btn btn-primary btn-lg detail-btn-cart" style="flex:2;min-width:160px;justify-content:center;">
+            <i class="fa-solid fa-bag-shopping"></i> Ajouter au panier
+          </button>
+          <button onclick="toggleWishlist(this,'{{ product.pk }}')" class="btn btn-ghost btn-lg btn-icon detail-btn-wish" style="width:48px;height:48px;flex-shrink:0;" title="Favoris">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+        </div>
+      </div>
+      {% elif not user.is_authenticated %}
+      <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-primary btn-lg btn-full" style="justify-content:center;margin-top:16px;">
+        <i class="fa-solid fa-right-to-bracket"></i> Connectez-vous pour commander
+      </a>
+      {% endif %}
+
+      <!-- Specs grid -->
+      <div class="row g-2 mb-4" style="margin-top:20px;">
+        <div class="col-6 col-sm-3">
+          <div class="detail-spec-card">
+            <div class="detail-spec-val" style="color:var(--green);">{{ product.quantity }}</div>
+            <div class="detail-spec-lbl">{{ product.unit }} en stock</div>
+          </div>
+        </div>
+        {% if product.category %}
+        <div class="col-6 col-sm-3">
+          <div class="detail-spec-card">
+            <div class="detail-spec-val" style="font-size:1.2rem;">{{ product.category.icon }}</div>
+            <div class="detail-spec-lbl">{{ product.category.name }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if product.weight_grams %}
+        <div class="col-6 col-sm-3">
+          <div class="detail-spec-card">
+            <div class="detail-spec-val">{{ product.weight_grams }}g</div>
+            <div class="detail-spec-lbl">Poids</div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="col-6 col-sm-3">
+          <div class="detail-spec-card">
+            <div class="detail-spec-val" style="font-size:.85rem;">W. {{ product.store.wilaya }}</div>
+            <div class="detail-spec-lbl">Wilaya</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      {% if product.description %}
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-12);padding:18px 20px;">
+        <h5 style="font-weight:700;margin-bottom:10px;font-size:.92rem;"><i class="fa-solid fa-circle-info me-2 txt-green"></i>Description</h5>
+        <p style="color:var(--text-md);font-size:.9rem;line-height:1.75;margin:0;">{{ product.description }}</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ══ REVIEWS ══ -->
+  <div style="margin-top:52px;">
+    <h3 style="font-weight:900;margin-bottom:22px;letter-spacing:-.03em;"><i class="fa-solid fa-comments me-2 txt-green"></i>Avis clients <span style="font-size:1rem;font-weight:500;color:var(--text-lt);">({{ product.reviews.count }})</span></h3>
+    {% if user.is_authenticated and user.is_customer %}
+    <div class="card card-body mb-4">
+      <h5 style="font-weight:700;margin-bottom:14px;">Laisser un avis</h5>
+      <form method="post" action="{% url 'reviews:add' product.slug %}">
+        {% csrf_token %}
+        <div class="star-rating mb-3" style="display:flex;gap:4px;">
+          {% for i in "12345" %}
+          <label style="font-size:1.8rem;color:var(--border-md);cursor:pointer;line-height:1;transition:color .1s;">
+            <input type="radio" name="rating" value="{{ forloop.counter }}" style="display:none;">★
+          </label>
+          {% endfor %}
+        </div>
+        <div class="form-group"><textarea name="comment" class="form-control" rows="3" placeholder="Partagez votre expérience avec ce produit..."></textarea></div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane"></i> Publier</button>
+      </form>
+    </div>
+    {% endif %}
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      {% for review in product.reviews.all %}
+      <div class="card card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="user-avatar" style="width:34px;height:34px;border-radius:8px;font-size:.75rem;">{{ review.customer.first_name|first|upper }}{{ review.customer.last_name|first|upper }}</div>
+            <div>
+              <div style="font-weight:700;font-size:.88rem;">{{ review.customer.get_full_name|default:review.customer.username }}</div>
+              <div style="color:var(--gold);font-size:.85rem;">
+                {% for i in "12345" %}{% if forloop.counter <= review.rating %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}{% endfor %}
+              </div>
+            </div>
+          </div>
+          <div style="font-size:.75rem;color:var(--text-lt);">{{ review.created_at|date:"d/m/Y" }}</div>
+        </div>
+        {% if review.comment %}<p style="font-size:.875rem;color:var(--text-md);margin:0;line-height:1.6;">{{ review.comment }}</p>{% endif %}
+      </div>
+      {% empty %}
+      <div style="text-align:center;padding:40px;background:var(--surface);border-radius:var(--r-16);border:1px solid var(--border);color:var(--text-lt);">
+        <i class="fa-regular fa-comment-dots" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>Aucun avis pour ce produit. Soyez le premier !
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ══ RELATED ══ -->
+  {% if related %}
+  <div style="margin-top:52px;">
+    <div class="section-header">
+      <div><h3 class="section-title">Vous pourriez aussi aimer</h3></div>
+      <a href="{% url 'products:catalog' %}?category={{ product.category.slug }}" class="section-link">Voir plus</a>
+    </div>
+    <div class="row g-3">
+      {% for p in related %}
+      <div class="col-6 col-md-3">
+        <div class="product-card">
+          <div class="product-img" style="aspect-ratio:1;">
+            {% if p.images.first %}<img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+            {% else %}<div class="product-img-placeholder" style="font-size:2.5rem;">{{ p.category.icon|default:"📦" }}</div>{% endif %}
+            {% if p.discount_pct > 0 %}<span class="badge-discount">-{{ p.discount_pct|floatformat:0 }}%</span>{% endif %}
+          </div>
+          <div class="product-body">
+            <a href="{% url 'products:detail' p.slug %}" class="product-name" style="color:inherit;">{{ p.name }}</a>
+            <div class="product-prices"><span class="price-now">{{ p.current_price|floatformat:0 }} DA</span>{% if p.discount_pct > 0 %}<span class="price-old">{{ p.original_price|floatformat:0 }}</span>{% endif %}</div>
+            <a href="{% url 'products:detail' p.slug %}" class="btn btn-outline btn-sm btn-full mt-1" style="justify-content:center;">Voir l'offre</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ STICKY MOBILE BAR ══ -->
+{% if user.is_authenticated and user.is_customer %}
+<div class="sticky-mobile-bar" id="stickyBar">
+  <div class="sticky-bar-info">
+    <div class="sticky-bar-name">{{ product.name|truncatechars:28 }}</div>
+    <div class="sticky-bar-price">{{ product.current_price|floatformat:0 }} DA
+      {% if product.discount_pct > 0 %}<span class="sticky-bar-old">{{ product.original_price|floatformat:0 }}</span>{% endif %}
+    </div>
+  </div>
+  <button onclick="addToCart('{{ product.slug }}',this)" class="btn btn-primary btn-sm sticky-bar-btn">
+    <i class="fa-solid fa-bag-shopping"></i> Ajouter
+  </button>
+</div>
+{% endif %}
+
+<script>
+// Show sticky bar after scrolling past the CTA buttons
+(function(){
+  var bar = document.getElementById('stickyBar');
+  if (!bar) return;
+  var trigger = document.querySelector('.detail-qty-row');
+  if (!trigger) return;
+  window.addEventListener('scroll', function() {
+    var rect = trigger.getBoundingClientRect();
+    bar.classList.toggle('visible', rect.bottom < 0);
+  }, { passive: true });
+})();
+
+function changeQty(delta) {
+  var input = document.getElementById('qtyInput');
+  var val = parseInt(input.value) + delta;
+  var max = parseInt(input.max) || 99;
+  if (val < 1) val = 1;
+  if (val > max) val = max;
+  input.value = val;
+}
+
+// DLC countdown
+(function() {
+  var el = document.getElementById('dlcCountdown');
+  if (!el) return;
+  var expiry = el.getAttribute('data-expiry');
+  if (!expiry) return;
+  var end = new Date(expiry);
+  var now = new Date();
+  var diff = Math.floor((end - now) / 86400000);
+  if (diff < 0) { el.textContent = 'Produit périmé'; el.style.color = 'var(--danger)'; }
+  else if (diff === 0) { el.textContent = 'Expire aujourd\'hui !'; el.style.color = 'var(--danger)'; }
+  else if (diff === 1) { el.textContent = 'Expire demain'; el.style.color = 'var(--orange)'; }
+  else if (diff <= 7) { el.textContent = 'Dans ' + diff + ' jours'; el.style.color = 'var(--orange)'; }
+  else { el.textContent = 'Dans ' + diff + ' jours'; el.style.color = 'var(--text-lt)'; }
+})();
+</script>
+{% endblock %}

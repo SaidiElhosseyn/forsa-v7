@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Proposer un prix — {{ product.name }}{% endblock %}
+{% block content %}
+<div class="container-forsa" style="max-width:860px;padding-top:24px;padding-bottom:52px;">
+
+  <a href="{% url 'products:detail' product.slug %}" class="btn btn-ghost btn-sm mb-4">
+    <i class="fa-solid fa-arrow-left"></i> Retour au produit
+  </a>
+
+  <div class="row g-4">
+    <!-- Colonne gauche — Produit -->
+    <div class="col-md-5">
+      <div class="card" style="overflow:hidden;position:sticky;top:90px;">
+        <div style="height:180px;background:var(--g3);display:flex;align-items:center;justify-content:center;font-size:80px;">
+          {% if product.images.first %}
+            <img src="{{ product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;" alt="{{ product.name }}">
+          {% else %}
+            {{ product.category.icon|default:"📦" }}
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="product-vendor mb-1"><i class="fa-solid fa-shop"></i> {{ product.store.name }}</div>
+          <h5 style="font-weight:800;margin-bottom:10px;">{{ product.name }}</h5>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;">
+            <span style="font-size:1.5rem;font-weight:900;color:var(--green);">{{ product.current_price|floatformat:0 }} DA</span>
+            {% if product.discount_pct > 0 %}
+              <span style="font-size:.9rem;text-decoration:line-through;color:var(--text-lt);">{{ product.original_price|floatformat:0 }} DA</span>
+              <span class="badge badge-red">-{{ product.discount_pct|floatformat:0 }}%</span>
+            {% endif %}
+          </div>
+          <div style="background:var(--surface-2);border-radius:var(--r-8);padding:10px 12px;font-size:.8rem;color:var(--text-md);">
+            <div class="mb-1"><i class="fa-solid fa-clock me-2 txt-green"></i>Expire le <strong>{{ product.expiry_date|date:"d/m/Y" }}</strong> ({{ product.days_until_expiry }} jours)</div>
+            <div><i class="fa-solid fa-cubes me-2 txt-green"></i>{{ product.quantity }} {{ product.unit }} disponible{{ product.quantity|pluralize }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne droite — Formulaire -->
+    <div class="col-md-7">
+      <div class="card card-body">
+        <h2 style="font-weight:900;font-size:1.4rem;margin-bottom:4px;letter-spacing:-.03em;">
+          <i class="fa-solid fa-handshake txt-green me-2"></i>Proposer un prix
+        </h2>
+        <p style="color:var(--text-lt);font-size:.875rem;margin-bottom:22px;">
+          Le vendeur sera notifié immédiatement et dispose de 24h pour répondre.
+        </p>
+
+        <!-- Guide des prix -->
+        <div style="background:var(--green-xl);border-radius:var(--r-10);padding:14px 16px;margin-bottom:20px;">
+          <div style="font-size:.78rem;font-weight:700;color:var(--green);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
+            <i class="fa-solid fa-scale-balanced me-1"></i>Fourchette de négociation
+          </div>
+          <div style="display:flex;gap:0;border-radius:var(--r-6);overflow:hidden;height:8px;margin-bottom:8px;">
+            <div style="flex:3;background:var(--danger);opacity:.4;"></div>
+            <div style="flex:4;background:var(--warning);opacity:.5;"></div>
+            <div style="flex:3;background:var(--success);opacity:.5;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-md);">
+            <span><strong style="color:var(--danger);">Min 30%</strong><br>{{ product.current_price|floatformat:0 }}×0.30 = <strong>{{ min_price|floatformat:0 }} DA</strong></span>
+            <span style="text-align:center;"><strong style="color:var(--warning);">Offre raisonnable</strong><br>-15 à -30%</span>
+            <span style="text-align:right;"><strong style="color:var(--success);">Prix actuel</strong><br><strong>{{ product.current_price|floatformat:0 }} DA</strong></span>
+          </div>
+        </div>
+
+        <form method="post" id="negoForm">
+          {% csrf_token %}
+          <!-- Prix proposé -->
+          <div class="form-group">
+            <label class="form-label" for="buyer_price">
+              Votre offre (DA) <span style="color:var(--danger);">*</span>
+            </label>
+            <div style="position:relative;">
+              <input type="number"
+                     id="buyer_price"
+                     name="buyer_price"
+                     class="form-control"
+                     value="{{ raw_price|default:'' }}"
+                     min="{{ min_price|floatformat:0 }}"
+                     max="{{ max_price|floatformat:0 }}"
+                     step="1"
+                     placeholder="Ex : {{ suggested_price|floatformat:0 }}"
+                     required
+                     oninput="updateCalc(this.value)"
+                     style="font-size:1.4rem;font-weight:900;color:var(--green);padding-right:60px;text-align:center;">
+              <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:.9rem;color:var(--text-lt);font-weight:600;">DA</span>
+            </div>
+            <div class="form-hint">Entre {{ min_price|floatformat:0 }} DA et {{ max_price|floatformat:0 }} DA</div>
+          </div>
+
+          <!-- Aperçu en temps réel -->
+          <div id="priceCalc" style="background:var(--surface-2);border-radius:var(--r-10);padding:13px;margin-bottom:16px;display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div>
+                <div style="font-size:.75rem;color:var(--text-lt);margin-bottom:2px;">Votre offre</div>
+                <div style="font-size:1.3rem;font-weight:900;color:var(--green);" id="calcPrice">— DA</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:.75rem;color:var(--text-lt);">Réduction</div>
+                <div style="font-size:1.1rem;font-weight:800;color:var(--danger);" id="calcDisc">—%</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:.75rem;color:var(--text-lt);">Économie</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--success);" id="calcSaving">— DA</div>
+              </div>
+            </div>
+            <div id="calcBar" style="height:4px;border-radius:2px;margin-top:10px;background:var(--success);width:0;transition:width .3s ease,background .3s;"></div>
+            <div id="calcLabel" style="font-size:.72rem;margin-top:4px;color:var(--text-lt);"></div>
+          </div>
+
+          <!-- Suggestions rapides -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--text-lt);margin-bottom:8px;">Suggestions :</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% for pct, label in suggestions %}
+              <button type="button"
+                      onclick="setSuggest({{ pct }})"
+                      class="btn btn-ghost btn-xs"
+                      style="border-radius:var(--r-full);">
+                -{{ pct }}% · {{ label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Message optionnel -->
+          <div class="form-group">
+            <label class="form-label" for="buyer_message">
+              Message au vendeur <span style="color:var(--text-xl);font-weight:400;">(optionnel)</span>
+            </label>
+            <textarea id="buyer_message" name="buyer_message" class="form-control" rows="3"
+                      placeholder="Ex : Je prends 3 unités si vous acceptez ce prix. Produit pour usage personnel."></textarea>
+          </div>
+
+          <!-- Conditions -->
+          <div style="background:var(--surface-2);border-radius:var(--r-8);padding:10px 13px;margin-bottom:18px;font-size:.78rem;color:var(--text-lt);">
+            <i class="fa-solid fa-circle-info me-2 txt-green"></i>
+            Le vendeur dispose de <strong>24 heures</strong> pour accepter, refuser ou faire une contre-offre.
+            Si aucune réponse, la négociation expire automatiquement.
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-full" id="submitBtn">
+            <i class="fa-solid fa-paper-plane"></i> Envoyer mon offre
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const origPrice  = {{ product.current_price|floatformat:2 }};
+const minPrice   = {{ min_price|floatformat:2 }};
+
+function updateCalc(val) {
+  const price = parseFloat(val);
+  const calc  = document.getElementById('priceCalc');
+  const btn   = document.getElementById('submitBtn');
+  if (isNaN(price) || price <= 0) { calc.style.display='none'; return; }
+  calc.style.display = 'block';
+
+  const disc   = ((1 - price/origPrice)*100).toFixed(1);
+  const saving = (origPrice - price).toFixed(0);
+  const pct    = Math.min(100, Math.max(0, (price-minPrice)/(origPrice-minPrice)*100));
+
+  document.getElementById('calcPrice').textContent  = Math.round(price).toLocaleString('fr-DZ') + ' DA';
+  document.getElementById('calcDisc').textContent   = '−' + disc + '%';
+  document.getElementById('calcSaving').textContent = '+' + Math.round(saving).toLocaleString('fr-DZ') + ' DA';
+
+  const bar   = document.getElementById('calcBar');
+  const label = document.getElementById('calcLabel');
+  bar.style.width = pct + '%';
+
+  if (disc > 50)      { bar.style.background='var(--danger)'; label.textContent='⚠️ Offre très agressive — risque de refus'; }
+  else if (disc > 30) { bar.style.background='var(--warning)'; label.textContent='💡 Offre ambitieuse — contre-offre probable'; }
+  else if (disc > 15) { bar.style.background='var(--success)'; label.textContent='✅ Offre raisonnable — bonne chance d\'acceptation'; }
+  else                { bar.style.background='var(--info)';    label.textContent='😊 Offre proche du prix — très likely acceptée'; }
+
+  btn.disabled = price < minPrice || price >= origPrice;
+}
+
+function setSuggest(pct) {
+  const price = Math.round(origPrice * (1 - pct/100));
+  document.getElementById('buyer_price').value = price;
+  updateCalc(price);
+}
+
+document.getElementById('negoForm').addEventListener('submit', () => {
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...';
+  btn.disabled  = true;
+});
+
+// Init
+const initVal = document.getElementById('buyer_price').value;
+if (initVal) updateCalc(initVal);
+</script>
+{% endblock %}

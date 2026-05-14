@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Historique paiements — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+    <div class="page-header">
+      <div><h1 class="page-title"><i class="fa-solid fa-money-bill-transfer txt-green me-2"></i>Historique des paiements</h1><div class="breadcrumb"><a href="{% url 'dashboard:customer' %}">Dashboard</a><span>/</span>Paiements</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Référence</th><th>Date</th><th>Commande</th><th>Mode</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td style="font-family:monospace;font-size:.78rem;color:var(--text-md);">{{ p.reference }}</td>
+            <td style="font-size:.82rem;">{{ p.created_at|date:"d/m/Y H:i" }}</td>
+            <td>{% if p.order %}<a href="{% url 'orders:detail' p.order.order_number %}" style="color:var(--green);font-size:.82rem;font-weight:600;">#{{ p.order.order_number|slice:":12" }}</a>{% else %}<span style="color:var(--text-lt);">—</span>{% endif %}</td>
+            <td><span class="badge badge-gray">{{ p.get_method_display }}</span></td>
+            <td style="font-weight:800;{% if p.status == 'refunded' %}color:var(--success){% else %}color:var(--text){% endif %};">{% if p.status == 'refunded' %}+{% endif %}{{ p.amount|floatformat:0 }} DA</td>
+            <td><span class="badge {% if p.status == 'completed' %}badge-green{% elif p.status == 'refunded' %}badge-blue{% elif p.status == 'failed' %}badge-red{% else %}badge-gray{% endif %}">{{ p.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="table-empty"><i class="fa-solid fa-inbox"></i>Aucun paiement enregistré.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{% endblock %}

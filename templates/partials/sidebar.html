@@ -1,0 +1,132 @@
+<aside class="sidebar" id="mainSidebar" role="navigation" aria-label="Dashboard navigation">
+  <div class="sidebar-logo">
+    {% load static %}
+    <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA" style="height:36px;width:auto;">
+    <button class="theme-switch" title="Thème" style="margin-left:auto;"></button>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+    <div class="user-info">
+      <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+      <div class="user-role">{{ request.user.get_role_display }}</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+
+    {% if request.user.is_admin_user %}
+    <!-- ── ADMIN ── -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Administration</div>
+      <a href="{% url 'dashboard:admin' %}" class="sidebar-link {% if 'admin' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-gauge-high"></i> Tableau de bord
+      </a>
+      <a href="#" class="sidebar-link">
+        <i class="fa-solid fa-users"></i> Utilisateurs <span class="sidebar-badge">0</span>
+      </a>
+      <a href="{% url 'stores:list' %}" class="sidebar-link">
+        <i class="fa-solid fa-shop"></i> Boutiques
+      </a>
+      <a href="{% url 'products:catalog' %}" class="sidebar-link">
+        <i class="fa-solid fa-box-open"></i> Produits
+      </a>
+      <a href="{% url 'negotiations:list' %}" class="sidebar-link">
+        <i class="fa-solid fa-handshake"></i> Négociations
+      </a>
+      <a href="#" class="sidebar-link">
+        <i class="fa-solid fa-cash-register"></i> Paiements
+      </a>
+      <a href="{% url 'dashboard:vendor_stats' %}" class="sidebar-link">
+        <i class="fa-solid fa-chart-bar"></i> Statistiques
+      </a>
+    </div>
+
+    {% elif request.user.is_vendor %}
+    <!-- ── VENDOR ── -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Ma Boutique</div>
+      <a href="{% url 'dashboard:vendor' %}" class="sidebar-link {% if request.resolver_match.url_name == 'vendor' %}active{% endif %}">
+        <i class="fa-solid fa-gauge-high"></i> Tableau de bord
+      </a>
+      <a href="{% url 'orders:list' %}" class="sidebar-link {% if 'orders' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-receipt"></i> Commandes
+        {% if pending_orders %}<span class="sidebar-badge">{{ pending_orders }}</span>{% endif %}
+      </a>
+      <a href="{% url 'products:create' %}" class="sidebar-link {% if request.resolver_match.url_name == 'create' %}active{% endif %}">
+        <i class="fa-solid fa-tag txt-green"></i> Offres &amp; promotions
+      </a>
+      <a href="{% url 'stores:my_store' %}" class="sidebar-link {% if 'my_store' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-boxes-stacked"></i> Stock &amp; inventaire
+      </a>
+      <a href="{% url 'dashboard:vendor_stats' %}" class="sidebar-link {% if 'stats' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-chart-line"></i> Analytique
+      </a>
+      <a href="{% url 'negotiations:list' %}" class="sidebar-link {% if 'negotiations' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-handshake"></i> Négociations
+        {% if pending_negos %}<span class="sidebar-badge">{{ pending_negos }}</span>{% endif %}
+      </a>
+      <a href="{% url 'accounts:profile' %}" class="sidebar-link {% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-gear"></i> Paramètres
+      </a>
+    </div>
+
+    {% else %}
+    <!-- ── CUSTOMER ── -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Mon Espace</div>
+      <a href="{% url 'dashboard:customer' %}" class="sidebar-link {% if request.resolver_match.url_name == 'customer' %}active{% endif %}">
+        <i class="fa-solid fa-gauge-high"></i> Tableau de bord
+      </a>
+      <a href="{% url 'products:catalog' %}" class="sidebar-link">
+        <i class="fa-solid fa-magnifying-glass"></i> Explorer les offres
+      </a>
+      <a href="{% url 'orders:cart' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cart' %}active{% endif %}">
+        <i class="fa-solid fa-bag-shopping"></i> Mon panier
+      </a>
+      <a href="{% url 'orders:list' %}" class="sidebar-link {% if 'orders' in request.resolver_match.namespace and request.resolver_match.url_name != 'cart' %}active{% endif %}">
+        <i class="fa-solid fa-clock-rotate-left"></i> Mes commandes
+      </a>
+      <a href="{% url 'negotiations:list' %}" class="sidebar-link {% if 'negotiations' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-handshake"></i> Mes négociations
+        {% if active_negos %}<span class="sidebar-badge" style="background:var(--green);">{{ active_negos }}</span>{% endif %}
+      </a>
+      <a href="{% url 'payments:virtual_card' %}" class="sidebar-link {% if 'virtual_card' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-credit-card"></i> Carte virtuelle
+      </a>
+      <a href="{% url 'accounts:wishlist' %}" class="sidebar-link {% if request.resolver_match.url_name == 'wishlist' %}active{% endif %}">
+        <i class="fa-regular fa-heart"></i> Mes favoris
+      </a>
+      <a href="{% url 'accounts:profile' %}" class="sidebar-link {% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fa-solid fa-gear"></i> Paramètres
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- ── QUICK NAV ── -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Navigation</div>
+      <a href="{% url 'home' %}" class="sidebar-link">
+        <i class="fa-solid fa-house"></i> Accueil
+      </a>
+      <a href="{% url 'products:catalog' %}" class="sidebar-link">
+        <i class="fa-solid fa-grid-2"></i> Catalogue
+      </a>
+      <a href="{% url 'products:catalog' %}?sort=discount" class="sidebar-link" style="color:var(--orange);">
+        <i class="fa-solid fa-fire" style="color:var(--orange);"></i> Meilleures offres
+      </a>
+      <a href="{% url 'products:catalog' %}?urgency=urgent" class="sidebar-link">
+        <i class="fa-solid fa-hourglass-half"></i> Expire bientôt
+      </a>
+    </div>
+
+  </nav>
+  <div class="sidebar-footer">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <a href="{% url 'accounts:profile' %}" style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text-md);font-weight:600;text-decoration:none;">
+        <i class="fa-solid fa-user-gear txt-green"></i> Profil
+      </a>
+      <a href="{% url 'accounts:logout' %}" style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--danger);font-weight:600;text-decoration:none;">
+        <i class="fa-solid fa-right-from-bracket"></i> Quitter
+      </a>
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Vendeur — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3" aria-label="Menu">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+
+    {% if not store %}
+    <div class="page-header"><div><h1 class="page-title">🏪 Ma Boutique</h1><div class="breadcrumb">Dashboard vendeur</div></div></div>
+    <div style="background:var(--surface);border:2px dashed var(--green);border-radius:var(--r-20);padding:52px;text-align:center;">
+      <div style="font-size:3.5rem;margin-bottom:14px;">🏪</div>
+      <h3 style="font-weight:800;color:var(--green);margin-bottom:8px;">Créez votre boutique pour commencer</h3>
+      <p style="color:var(--text-lt);max-width:400px;margin:0 auto 24px;">Votre boutique sera active immédiatement.</p>
+      <a href="{% url 'stores:create' %}" class="btn btn-primary btn-lg"><i class="fa-solid fa-circle-plus"></i> Créer ma boutique</a>
+    </div>
+
+    {% else %}
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-gauge-high txt-green me-2"></i>Tableau de bord</h1>
+        <div class="breadcrumb"><a href="{% url 'home' %}">Accueil</a><span>/</span>{{ store.name }}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <!-- Date range quick filter -->
+        <div class="stats-date-bar" style="margin:0;">
+          <span class="stats-date-btn active">Ce mois</span>
+          <span class="stats-date-btn">7 jours</span>
+          <span class="stats-date-btn">Tout</span>
+        </div>
+        <a href="{% url 'products:create' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Ajouter un produit</a>
+      </div>
+    </div>
+
+    <!-- ── KPIs ── -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--green);">
+          <div class="stat-icon green"><i class="fa-solid fa-coins"></i></div>
+          <div>
+            <div class="stat-num">{{ revenue_month|default:"0"|floatformat:0 }}</div>
+            <div class="stat-lbl">Chiffre d'affaires (DA)</div>
+            <div style="font-size:.68rem;color:var(--success);margin-top:2px;"><i class="fa-solid fa-arrow-up me-1"></i>+{{  "8"|default:"0" }}% ce mois</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--info);">
+          <div class="stat-icon" style="background:rgba(3,105,161,.1);color:var(--info);"><i class="fa-solid fa-bags-shopping"></i></div>
+          <div>
+            <div class="stat-num">{{ orders_month|default:"0" }}</div>
+            <div class="stat-lbl">Commandes</div>
+            <div style="font-size:.68rem;color:var(--success);margin-top:2px;"><i class="fa-solid fa-arrow-up me-1"></i>+{{ "12"|default:"0" }}% ce mois</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--gold);">
+          <div class="stat-icon gold"><i class="fa-solid fa-box-open"></i></div>
+          <div>
+            <div class="stat-num">{{ products_active|default:"0" }}</div>
+            <div class="stat-lbl">Produits actifs</div>
+            <div style="font-size:.68rem;color:var(--text-lt);margin-top:2px;">en catalogue</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--danger);">
+          <div class="stat-icon red"><i class="fa-solid fa-hourglass-half"></i></div>
+          <div>
+            <div class="stat-num">{{ expiring_soon|default:"0" }}</div>
+            <div class="stat-lbl">Stock à date courte</div>
+            <div style="font-size:.68rem;color:var(--danger);margin-top:2px;">expirent ≤3 jours</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Onboarding checklist (shown while setup incomplete) ── -->
+    {% if not products_active or products_active == 0 %}
+    <div class="card card-body mb-4">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h5 style="font-weight:800;margin:0;"><i class="fa-solid fa-rocket me-2 txt-green"></i>Démarrez votre boutique</h5>
+        <span style="font-size:.78rem;color:var(--text-lt);" id="onboardingPct">0 / 3 étapes</span>
+      </div>
+      <div class="onboarding-progress-bar"><div class="onboarding-progress-fill" id="onboardingFill" style="width:0%;"></div></div>
+      <div class="onboarding-steps">
+        <div class="onboarding-step done">
+          <div class="onboarding-step-icon"><i class="fa-solid fa-check"></i></div>
+          <div style="flex:1;"><div style="font-weight:700;font-size:.875rem;">Créer votre boutique</div><div style="font-size:.72rem;color:var(--text-lt);">Boutique active : {{ store.name }}</div></div>
+          <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:1.1rem;"></i>
+        </div>
+        <a href="{% url 'stores:my_store' %}" class="onboarding-step {% if store.logo %}done{% endif %}">
+          <div class="onboarding-step-icon"><i class="fa-solid fa-{% if store.logo %}check{% else %}image{% endif %}"></i></div>
+          <div style="flex:1;"><div style="font-weight:700;font-size:.875rem;">Ajouter un logo</div><div style="font-size:.72rem;color:var(--text-lt);">Rendez votre boutique reconnaissable</div></div>
+          {% if store.logo %}<i class="fa-solid fa-circle-check" style="color:var(--success);font-size:1.1rem;"></i>{% else %}<i class="fa-solid fa-chevron-right" style="color:var(--text-lt);"></i>{% endif %}
+        </a>
+        <a href="{% url 'products:create' %}" class="onboarding-step">
+          <div class="onboarding-step-icon"><i class="fa-solid fa-circle-plus"></i></div>
+          <div style="flex:1;"><div style="font-weight:700;font-size:.875rem;">Publier votre premier produit</div><div style="font-size:.72rem;color:var(--text-lt);">Commencez à vendre sur FORSA</div></div>
+          <i class="fa-solid fa-chevron-right" style="color:var(--text-lt);"></i>
+        </a>
+      </div>
+    </div>
+    <script>
+    (function(){
+      var done = document.querySelectorAll('.onboarding-step.done').length;
+      var total = document.querySelectorAll('.onboarding-step').length;
+      var pct = Math.round(done/total*100);
+      var fill = document.getElementById('onboardingFill');
+      var label = document.getElementById('onboardingPct');
+      if(fill) fill.style.width = pct + '%';
+      if(label) label.textContent = done + ' / ' + total + ' étapes';
+    })();
+    </script>
+    {% endif %}
+
+    <!-- ── AI Suggestion ── -->
+    {% if expiring_soon and expiring_soon > 0 %}
+    <div class="ai-suggestion-box">
+      <div class="ai-suggestion-icon">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div style="flex:1;">
+        <div class="ai-suggestion-badge">Suggestion IA</div>
+        <div class="ai-suggestion-text">
+          Il est recommandé d'ajuster/réduire une promotion sur vos <strong>{{ expiring_soon }} produit{{ expiring_soon|pluralize }}</strong> à date courte pour accélérer les ventes avant expiration.
+          <strong>+100%</strong> de chances d'écoulement si la promotion dépasse -40%.
+        </div>
+        <div class="ai-suggestion-actions">
+          <a href="{% url 'stores:my_store' %}" class="btn btn-sm btn-primary">
+            <i class="fa-solid fa-bolt"></i> Gérer mes offres
+          </a>
+          <button class="btn btn-sm btn-ghost" onclick="this.closest('.ai-suggestion-box').style.display='none'">
+            Ignorer
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Négociations en attente ── -->
+    {% if pending_negos %}
+    <div style="background:rgba(217,119,6,.1);border:1.5px solid rgba(217,119,6,.3);border-radius:var(--r-12);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fa-solid fa-handshake" style="font-size:1.5rem;color:var(--warning);"></i>
+        <div>
+          <div style="font-weight:800;color:var(--warning);">{{ pending_negos }} négociation{{ pending_negos|pluralize }} en attente</div>
+          <div style="font-size:.82rem;color:var(--text-md);">Répondez dans les 24h pour ne pas les perdre.</div>
+        </div>
+      </div>
+      <a href="{% url 'negotiations:list' %}" class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;font-weight:700;border-radius:var(--r-8);padding:8px 16px;white-space:nowrap;">
+        <i class="fa-solid fa-reply me-1"></i>Voir les négociations
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- ── Charts + Top products ── -->
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="card card-body">
+          <h5 style="font-weight:800;margin-bottom:14px;"><i class="fa-solid fa-chart-line me-2 txt-green"></i>Évolution des ventes</h5>
+          <canvas id="vendorChart" height="100"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <!-- Alertes -->
+        <div class="card card-body" style="height:100%;">
+          <h5 style="font-weight:800;margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation me-2" style="color:var(--warning);"></i>Alertes</h5>
+          {% if expiring_products %}
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            {% for p in expiring_products|slice:":5" %}
+            <div style="display:flex;gap:8px;align-items:center;padding:8px;background:var(--surface-2);border-radius:var(--r-8);border:1px solid var(--border);">
+              <span class="badge-expiry {{ p.expiry_urgency }}" style="position:static;display:inline-block;flex-shrink:0;font-size:.65rem;">{{ p.days_until_expiry }}j</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ p.name }}</div>
+                <div style="font-size:.7rem;color:var(--text-lt);">{{ p.quantity }} unités en stock</div>
+              </div>
+              <a href="{% url 'products:edit' p.slug %}" style="color:var(--green);font-size:.8rem;flex-shrink:0;" title="Modifier"><i class="fa-solid fa-pencil"></i></a>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:24px;color:var(--text-lt);font-size:.85rem;">
+            <i class="fa-solid fa-circle-check" style="font-size:2rem;color:var(--success);display:block;margin-bottom:8px;"></i>
+            Aucune alerte pour le moment
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Commandes récentes ── -->
+    <div class="table-wrap">
+      <div class="table-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-bags-shopping me-2 txt-green"></i>Gérer les commandes</h5>
+        <!-- Status tabs -->
+        <div class="order-status-tabs" style="border:none;padding:0;margin:0;">
+          <span class="order-status-tab active" onclick="filterOrders(this,'all')">Toutes</span>
+          <span class="order-status-tab" onclick="filterOrders(this,'pending')">En attente</span>
+          <span class="order-status-tab" onclick="filterOrders(this,'confirmed')">Préparation</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Commande</th>
+            <th>Client</th>
+            <th>Produits</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in recent_orders %}
+          <tr id="order-row-{{ order.order_number }}" data-status="{{ order.status }}">
+            <td style="font-family:monospace;font-size:.78rem;color:var(--green);">{{ order.order_number|slice:":12" }}</td>
+            <td style="font-size:.875rem;">{{ order.customer.get_full_name|default:order.customer.username|truncatechars:16 }}</td>
+            <td style="font-size:.82rem;color:var(--text-lt);">{{ order.items.count }} unité{{ order.items.count|pluralize }}</td>
+            <td style="font-weight:800;color:var(--green);">{{ order.total_amount|floatformat:0 }} DA</td>
+            <td>
+              <span id="status-badge-{{ order.order_number }}" class="badge {% if order.status == 'delivered' %}badge-green{% elif order.status == 'cancelled' %}badge-red{% elif order.status == 'confirmed' %}badge-blue{% elif order.status == 'pending' %}badge-orange{% else %}badge-gray{% endif %}">
+                {{ order.get_status_display }}
+              </span>
+            </td>
+            <td>
+              <div id="actions-{{ order.order_number }}" style="display:flex;gap:6px;align-items:center;">
+                {% if order.status == 'pending' %}
+                <button onclick="vendorOrderAction('{{ order.order_number }}','confirm')" class="btn btn-xs btn-primary" title="Accepter">
+                  <i class="fa-solid fa-check"></i> Accepter
+                </button>
+                <button onclick="vendorOrderAction('{{ order.order_number }}','cancel')" class="btn btn-xs btn-danger" title="Annuler">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                {% elif order.status == 'confirmed' %}
+                <button onclick="vendorOrderAction('{{ order.order_number }}','cancel')" class="btn btn-xs btn-danger" title="Annuler">
+                  <i class="fa-solid fa-xmark"></i> Annuler
+                </button>
+                {% else %}
+                <span style="font-size:.75rem;color:var(--text-lt);">—</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="table-empty"><i class="fa-solid fa-inbox"></i> Aucune commande pour le moment.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Summary footer -->
+      <div style="padding:14px 18px;background:var(--surface-2);border-top:1px solid var(--border);display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="font-size:.8rem;color:var(--text-lt);">
+          <strong style="color:var(--text);">Total des ventes</strong><br>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--green);">{{ revenue_month|default:"0"|floatformat:0 }} DA</span>
+        </div>
+        <div style="font-size:.8rem;color:var(--text-lt);border-left:1px solid var(--border);padding-left:24px;">
+          <strong style="color:var(--text);">Commandes</strong><br>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--text);">{{ orders_month|default:"0" }}</span>
+        </div>
+        <div style="font-size:.8rem;color:var(--text-lt);border-left:1px solid var(--border);padding-left:24px;">
+          <strong style="color:var(--text);">Produits actifs</strong><br>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--text);">{{ products_active|default:"0" }}</span>
+        </div>
+        <div style="font-size:.8rem;color:var(--text-lt);border-left:1px solid var(--border);padding-left:24px;">
+          <strong style="color:var(--text);">Note client</strong><br>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--gold);">{{ store.rating|default:"4.5" }}/5</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if store %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+window.addEventListener('load', function () {
+  if (typeof Chart === 'undefined' || typeof initChart !== 'function') return;
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  initChart('vendorChart','bar',{{ labels|safe }},[
+    {label:'Ventes (DA)',data:{{ sales_data|safe }},backgroundColor:'rgba(26,107,47,.75)',borderRadius:5,yAxisID:'y'},
+    {label:'Commandes',data:{{ orders_data|safe }},backgroundColor:'rgba(245,166,35,.75)',borderRadius:5,yAxisID:'y1'}
+  ],{scales:{
+    y:{beginAtZero:true,position:'left',grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>v.toLocaleString()+' DA'}},
+    y1:{beginAtZero:true,position:'right',grid:{display:false},ticks:{stepSize:1}},
+    x:{grid:{display:false}}
+  }});
+});
+
+function filterOrders(tab, status) {
+  document.querySelectorAll('.order-status-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('tbody tr[data-status]').forEach(row => {
+    if (status === 'all' || row.dataset.status === status) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+async function vendorOrderAction(orderNumber, action) {
+  const label = action === 'confirm' ? 'accepter' : 'annuler';
+  if (!confirm(`Voulez-vous vraiment ${label} la commande #${orderNumber} ?`)) return;
+
+  const csrf = document.cookie.match(/csrftoken=([\w-]+)/)?.[1] || '';
+  const btn  = event.currentTarget;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  btn.disabled  = true;
+
+  try {
+    const res  = await fetch(`/orders/vendor/${orderNumber}/update/`, {
+      method:  'POST',
+      headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+      body:    `action=${action}`,
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      const badge = document.getElementById(`status-badge-${orderNumber}`);
+      if (badge) {
+        badge.className = 'badge ' + (data.status === 'confirmed' ? 'badge-blue' :
+                          data.status === 'cancelled' ? 'badge-red' : 'badge-gray');
+        badge.textContent = data.label;
+      }
+      const actions = document.getElementById(`actions-${orderNumber}`);
+      if (actions) actions.innerHTML = '<span style="font-size:.75rem;color:var(--text-lt);">—</span>';
+      showToast(data.msg, 'success');
+    } else {
+      showToast(data.error || 'Erreur serveur', 'error');
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    }
+  } catch(e) {
+    showToast('Erreur réseau.', 'error');
+    btn.innerHTML = orig;
+    btn.disabled  = false;
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

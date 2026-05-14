@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Revenus — FORSA{% endblock %}
+{% block navbar %}{% endblock %}{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-coins txt-green me-2"></i>Revenus</h1>
+        <div class="breadcrumb">
+          <a href="{% url 'home' %}">Accueil</a><span>/</span>
+          <a href="{% url 'dashboard:vendor' %}">Dashboard</a><span>/</span>Revenus
+        </div>
+      </div>
+      <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-house"></i> Accueil</a>
+    </div>
+
+    <!-- Total banner -->
+    <div style="background:linear-gradient(135deg,var(--green-dk),var(--green));border-radius:var(--r-14);padding:24px 28px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+      <div>
+        <div style="font-size:.85rem;color:rgba(255,255,255,.7);margin-bottom:4px;">Total 6 derniers mois</div>
+        <div style="font-size:2.2rem;font-weight:900;color:#fff;">{{ total|floatformat:0 }} DA</div>
+      </div>
+      <i class="fa-solid fa-sack-dollar" style="font-size:3rem;color:rgba(255,255,255,.2);"></i>
+    </div>
+
+    <!-- Monthly table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-calendar me-2 txt-green"></i>Détail mensuel</h5>
+      </div>
+      <table>
+        <thead><tr><th>Mois</th><th>Commandes</th><th>Chiffre d'affaires</th></tr></thead>
+        <tbody>
+          {% for m in months %}
+          <tr>
+            <td style="font-weight:600;">{{ m.label }}</td>
+            <td><span class="badge badge-green">{{ m.orders }}</span></td>
+            <td style="font-weight:800;color:var(--green);">{{ m.revenue|floatformat:0 }} DA</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Ma Carte Virtuelle — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+    <div class="page-header"><div><h1 class="page-title"><i class="fa-solid fa-credit-card txt-green me-2"></i>Ma Carte Virtuelle</h1><div class="breadcrumb"><a href="{% url 'dashboard:customer' %}">Dashboard</a><span>/</span>Carte virtuelle</div></div></div>
+    <div class="row g-4">
+      <div class="col-lg-5">
+        {% if card %}
+        <div class="vcard mb-3">
+          <div class="vcard-chip"></div>
+          <div class="vcard-number">{{ card.card_number|slice:":4" }} **** **** {{ card.card_number|slice:"-4:" }}</div>
+          <div class="vcard-label">Solde disponible</div>
+          <div class="vcard-balance">{{ card.balance|floatformat:0 }} DA</div>
+          <div class="vcard-bottom">
+            <div class="vcard-holder">{{ request.user.get_full_name|upper }}</div>
+            <span class="vcard-test-badge">TEST CARD</span>
+          </div>
+        </div>
+        <div class="alert alert-info"><i class="fa-solid fa-circle-info"></i><div>Carte de test uniquement. Le support <strong>Baridimob</strong> sera ajouté prochainement pour les paiements réels.</div></div>
+        {% else %}
+        <div class="card card-body text-center"><i class="fa-solid fa-credit-card" style="font-size:3rem;color:var(--text-xl);margin-bottom:12px;display:block;"></i><p style="color:var(--text-lt);">Aucune carte virtuelle associée à ce compte.</p></div>
+        {% endif %}
+      </div>
+      <div class="col-lg-7">
+        <div class="table-wrap">
+          <div class="table-header"><h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-clock-rotate-left me-2 txt-green"></i>Historique des transactions</h5></div>
+          <table><thead><tr><th>Référence</th><th>Date</th><th>Commande</th><th>Montant</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td style="font-size:.75rem;font-family:monospace;color:var(--text-md);">{{ p.reference }}</td>
+              <td style="font-size:.82rem;">{{ p.created_at|date:"d/m/Y H:i" }}</td>
+              <td style="font-size:.82rem;">{% if p.order %}<a href="{% url 'orders:detail' p.order.order_number %}" style="color:var(--green);">#{{ p.order.order_number|slice:":10" }}</a>{% else %}—{% endif %}</td>
+              <td style="font-weight:800;{% if p.status == 'refunded' %}color:var(--success);{% else %}color:var(--danger);{% endif %}">{% if p.status == 'refunded' %}+{% else %}−{% endif %}{{ p.amount|floatformat:0 }} DA</td>
+              <td><span class="badge {% if p.status == 'completed' %}badge-green{% elif p.status == 'refunded' %}badge-blue{% else %}badge-gray{% endif %}">{{ p.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="table-empty"><i class="fa-solid fa-inbox"></i>Aucune transaction pour le moment.</td></tr>
+            {% endfor %}
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

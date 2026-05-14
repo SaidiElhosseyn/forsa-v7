@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+{% block title %}Négociation — {{ nego.product.name }}{% endblock %}
+{% block navbar %}{% endblock %}{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}{% block footer %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Timeline chat-like ─────────────────────────────────── */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:14px;padding:16px 0;position:relative;}
+.tl-item:not(:last-child)::before{
+  content:'';position:absolute;left:19px;top:52px;
+  width:2px;bottom:-16px;background:var(--border);}
+.tl-dot{width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;position:relative;z-index:1;border:2px solid #fff;box-shadow:var(--sh-sm);}
+.tl-dot.buyer{background:rgba(3,105,161,.15);}
+.tl-dot.vendor{background:var(--green-xl);}
+.tl-dot.system{background:var(--surface-2);}
+.tl-dot.success{background:rgba(22,163,74,.15);}
+.tl-dot.danger{background:rgba(220,38,38,.1);}
+.tl-content{flex:1;min-width:0;}
+.tl-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.tl-who{font-weight:700;font-size:.875rem;color:var(--text);}
+.tl-time{font-size:.72rem;color:var(--text-xl);}
+.tl-bubble{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:0 var(--r-12) var(--r-12) var(--r-12);
+  padding:12px 14px;}
+.tl-bubble.me{
+  background:var(--green-xl);border-color:rgba(26,107,47,.2);
+  border-radius:var(--r-12) 0 var(--r-12) var(--r-12);}
+.tl-bubble.system-bubble{background:var(--surface-2);border-radius:var(--r-10);}
+/* ── Price badge ────────────────────────────────────────── */
+.price-big{font-size:1.8rem;font-weight:900;color:var(--green);line-height:1;}
+.price-orig{font-size:.85rem;text-decoration:line-through;color:var(--text-lt);}
+.disc-pct{background:var(--danger);color:#fff;padding:3px 10px;border-radius:99px;font-size:.8rem;font-weight:800;}
+/* ── Action box ─────────────────────────────────────────── */
+.action-box{
+  background:var(--surface);border:2px solid var(--green);
+  border-radius:var(--r-14);padding:20px;margin-top:8px;}
+.action-box.counter-box{border-color:var(--orange);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <a href="{% url 'negotiations:list' %}" class="btn btn-ghost btn-sm" style="padding:5px 10px;">
+            <i class="fa-solid fa-arrow-left"></i>
+          </a>
+          <h1 class="page-title" style="margin:0;">
+            <i class="fa-solid fa-handshake txt-green me-2"></i>
+            Négociation #{{ nego.pk }}
+          </h1>
+          <span style="font-size:.78rem;font-weight:700;padding:4px 12px;border-radius:99px;
+            background:{% if nego.status == 'pending' %}rgba(217,119,6,.12){% elif nego.status == 'counter' %}rgba(3,105,161,.12){% elif nego.status == 'accepted' %}rgba(22,163,74,.12){% elif nego.status == 'ordered' %}rgba(26,107,47,.12){% else %}rgba(220,38,38,.1){% endif %};
+            color:{% if nego.status == 'pending' %}var(--warning){% elif nego.status == 'counter' %}var(--info){% elif nego.status == 'accepted' %}var(--success){% elif nego.status == 'ordered' %}var(--green){% else %}var(--danger){% endif %};">
+            {% if nego.status == 'pending' %}⏳ En attente vendeur
+            {% elif nego.status == 'counter' %}🔄 Contre-offre
+            {% elif nego.status == 'accepted' %}✅ Acceptée
+            {% elif nego.status == 'ordered' %}🛒 Commandée
+            {% elif nego.status == 'rejected' %}❌ Refusée
+            {% elif nego.status == 'expired' %}⏰ Expirée
+            {% else %}🚫 Annulée{% endif %}
+          </span>
+        </div>
+        <div class="breadcrumb"><a href="{% url 'home' %}">Accueil</a><span>/</span><a href="{% url 'negotiations:list' %}">Négociations</a><span>/</span>#{{ nego.pk }}</div>
+      </div>
+      {% if nego.status in 'pending,counter' %}
+      <form method="post" action="{% url 'negotiations:cancel' nego.pk %}" onsubmit="return confirm('Annuler cette négociation ?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">
+          <i class="fa-solid fa-xmark"></i> Annuler
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="row g-4">
+      <!-- ═══ TIMELINE ═══ -->
+      <div class="col-lg-7">
+
+        <!-- Countdown active -->
+        {% if nego.status in 'pending,counter' and nego.time_remaining > 0 %}
+        <div style="background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.25);border-radius:var(--r-10);padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:20px;font-size:.875rem;">
+          <i class="fa-regular fa-clock" style="color:var(--warning);font-size:1.1rem;"></i>
+          <span style="color:var(--warning);font-weight:600;">
+            {% if nego.status == 'pending' %}Le vendeur doit répondre dans{% else %}L'acheteur doit répondre dans{% endif %}
+            <span id="main-timer" data-seconds="{{ nego.time_remaining }}" style="font-weight:900;margin-left:4px;">…</span>
+          </span>
+        </div>
+        {% elif nego.status == 'accepted' and not nego.order and role == 'buyer' %}
+        <div style="background:rgba(22,163,74,.12);border:2px solid var(--success);border-radius:var(--r-12);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800;color:var(--success);margin-bottom:3px;"><i class="fa-solid fa-circle-check me-2"></i>Offre acceptée !</div>
+            <div style="font-size:.84rem;color:var(--text-md);">Prix final : <strong>{{ nego.final_price|floatformat:0 }} DA</strong>. Finalisez votre commande maintenant.</div>
+          </div>
+          <a href="{% url 'negotiations:create_order' nego.pk %}" class="btn btn-sm" style="background:var(--success);color:#fff;border:none;cursor:pointer;border-radius:var(--r-8);padding:8px 16px;font-weight:700;white-space:nowrap;">
+            <i class="fa-solid fa-shopping-cart me-1"></i>Commander au prix négocié
+          </a>
+        </div>
+        {% elif nego.order %}
+        <div style="background:var(--green-xl);border:1.5px solid var(--green);border-radius:var(--r-12);padding:12px 16px;margin-bottom:20px;">
+          <i class="fa-solid fa-circle-check txt-green me-2"></i>
+          Commande créée : <a href="{% url 'orders:detail' nego.order.order_number %}" style="color:var(--green);font-weight:700;">{{ nego.order.order_number }}</a>
+        </div>
+        {% endif %}
+
+        <!-- ── TIMELINE ─────────────────────────────────── -->
+        <div class="card card-body" style="padding:20px;">
+          <h5 style="font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-timeline txt-green"></i>Historique de la négociation
+          </h5>
+          <div class="timeline">
+
+            <!-- 1. Produit affiché -->
+            <div class="tl-item">
+              <div class="tl-dot system"><i class="fa-solid fa-tag" style="font-size:.75rem;color:var(--text-lt);"></i></div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-who">Produit mis en vente</span>
+                  <span class="tl-time">Prix : {{ nego.original_price|floatformat:0 }} DA</span>
+                </div>
+                <div class="tl-bubble system-bubble" style="font-size:.84rem;color:var(--text-md);">
+                  <a href="{% url 'products:detail' nego.product.slug %}" style="font-weight:700;color:var(--green);">{{ nego.product.name }}</a>
+                  — <strong>{{ nego.original_price|floatformat:0 }} DA</strong>
+                  · {{ nego.product.expiry_date|date:"d/m/Y" }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Offre acheteur -->
+            <div class="tl-item">
+              <div class="tl-dot buyer">👤</div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-who">{{ nego.buyer.get_full_name|default:nego.buyer.username }}</span>
+                  <span class="tl-time">{{ nego.created_at|date:"d/m/Y H:i" }}</span>
+                  <span style="font-size:.68rem;background:rgba(3,105,161,.1);color:var(--info);padding:2px 8px;border-radius:99px;font-weight:600;">Acheteur</span>
+                  {% if role == 'buyer' %}<span style="font-size:.68rem;color:var(--text-xl);">Vous</span>{% endif %}
+                </div>
+                <div class="tl-bubble {% if role == 'buyer' %}me{% endif %}">
+                  <div style="margin-bottom:8px;">
+                    <span class="price-big">{{ nego.buyer_price|floatformat:0 }} DA</span>
+                    <span class="price-orig ms-2">{{ nego.original_price|floatformat:0 }} DA</span>
+                    <span class="disc-pct ms-2">-{{ nego.buyer_discount_pct|floatformat:0 }}%</span>
+                  </div>
+                  {% if nego.buyer_message %}
+                  <div style="font-size:.84rem;color:var(--text-md);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+                    <i class="fa-solid fa-comment me-1 txt-green"></i>{{ nego.buyer_message }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Réponse vendeur -->
+            {% if nego.status not in 'pending' %}
+            <div class="tl-item">
+              <div class="tl-dot vendor">🏪</div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-who">{{ nego.vendor.get_full_name|default:nego.vendor.username }}</span>
+                  <span class="tl-time">{{ nego.updated_at|date:"d/m/Y H:i" }}</span>
+                  <span style="font-size:.68rem;background:var(--green-xl);color:var(--green);padding:2px 8px;border-radius:99px;font-weight:600;">Vendeur</span>
+                  {% if role == 'vendor' %}<span style="font-size:.68rem;color:var(--text-xl);">Vous</span>{% endif %}
+                </div>
+                {% if nego.status == 'accepted' and not nego.counter_price %}
+                <div class="tl-bubble {% if role == 'vendor' %}me{% endif %}">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:1.2rem;"></i>
+                    <span style="font-weight:800;color:var(--success);font-size:.95rem;">Offre acceptée !</span>
+                    <span style="font-size:.85rem;color:var(--text-md);">Prix final : <strong>{{ nego.final_price|floatformat:0 }} DA</strong></span>
+                  </div>
+                  {% if nego.vendor_message %}<div style="font-size:.84rem;color:var(--text-md);">{{ nego.vendor_message }}</div>{% endif %}
+                </div>
+                {% elif nego.status == 'rejected' and not nego.counter_price %}
+                <div class="tl-bubble {% if role == 'vendor' %}me{% endif %}">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <i class="fa-solid fa-circle-xmark" style="color:var(--danger);font-size:1.2rem;"></i>
+                    <span style="font-weight:800;color:var(--danger);font-size:.95rem;">Offre refusée</span>
+                  </div>
+                  {% if nego.vendor_message %}<div style="font-size:.84rem;color:var(--text-md);">{{ nego.vendor_message }}</div>{% endif %}
+                </div>
+                {% elif nego.counter_price %}
+                <div class="tl-bubble {% if role == 'vendor' %}me{% endif %}">
+                  <div style="margin-bottom:8px;">
+                    <div style="font-size:.78rem;color:var(--text-lt);margin-bottom:4px;">Contre-offre :</div>
+                    <span class="price-big" style="color:var(--orange);">{{ nego.counter_price|floatformat:0 }} DA</span>
+                  </div>
+                  {% if nego.counter_message %}<div style="font-size:.84rem;color:var(--text-md);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><i class="fa-solid fa-comment me-1"></i>{{ nego.counter_message }}</div>{% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- 4. Réponse acheteur à contre-offre -->
+            {% if nego.counter_price and nego.status in 'accepted,rejected,ordered' %}
+            <div class="tl-item">
+              <div class="tl-dot {% if nego.status == 'accepted' or nego.status == 'ordered' %}success{% else %}danger{% endif %}">
+                {% if nego.status == 'accepted' or nego.status == 'ordered' %}✅{% else %}❌{% endif %}
+              </div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-who">{{ nego.buyer.get_full_name|default:nego.buyer.username }}</span>
+                  <span class="tl-time">{{ nego.updated_at|date:"d/m/Y H:i" }}</span>
+                  {% if role == 'buyer' %}<span style="font-size:.68rem;color:var(--text-xl);">Vous</span>{% endif %}
+                </div>
+                <div class="tl-bubble {% if role == 'buyer' %}me{% endif %}">
+                  {% if nego.status in 'accepted,ordered' %}
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-circle-check" style="color:var(--success);"></i>
+                    <span style="font-weight:800;color:var(--success);">Contre-offre acceptée — {{ nego.final_price|floatformat:0 }} DA</span>
+                  </div>
+                  {% else %}
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-circle-xmark" style="color:var(--danger);"></i>
+                    <span style="font-weight:700;color:var(--danger);">Contre-offre refusée</span>
+                  </div>
+                  {% endif %}
+                  {% if nego.buyer_counter_message %}<div style="font-size:.84rem;color:var(--text-md);margin-top:6px;">{{ nego.buyer_counter_message }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- 5. Commande créée -->
+            {% if nego.order %}
+            <div class="tl-item">
+              <div class="tl-dot success">🛒</div>
+              <div class="tl-content">
+                <div class="tl-header"><span class="tl-who">Commande créée</span></div>
+                <div class="tl-bubble system-bubble">
+                  <a href="{% url 'orders:detail' nego.order.order_number %}" style="color:var(--green);font-weight:700;">{{ nego.order.order_number }}</a>
+                  · Prix payé : <strong>{{ nego.final_price|floatformat:0 }} DA</strong>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+
+        <!-- ═══ ACTION PANELS ═══════════════════════════════ -->
+
+        <!-- VENDOR: respond to buyer offer -->
+        {% if role == 'vendor' and nego.status == 'pending' %}
+        <div class="action-box mt-4" id="vendorActionBox">
+          <h5 style="font-weight:800;margin-bottom:4px;"><i class="fa-solid fa-reply txt-green me-2"></i>Répondre à l'offre</h5>
+          <p style="font-size:.84rem;color:var(--text-lt);margin-bottom:18px;">
+            {{ nego.buyer.get_full_name|default:nego.buyer.username }} propose <strong>{{ nego.buyer_price|floatformat:0 }} DA</strong> pour <strong>{{ nego.product.name }}</strong>.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <!-- Accept -->
+            <div style="background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.2);border-radius:var(--r-10);padding:14px;">
+              <div style="font-weight:700;color:var(--success);margin-bottom:8px;"><i class="fa-solid fa-check me-2"></i>Accepter l'offre</div>
+              <textarea id="msg-accept" class="form-control" rows="2" placeholder="Message optionnel pour l'acheteur..." style="margin-bottom:10px;font-size:.84rem;"></textarea>
+              <button onclick="vendorRespond('accept')" class="btn btn-sm" style="background:var(--success);color:#fff;border:none;font-weight:700;cursor:pointer;border-radius:var(--r-8);padding:8px 18px;">
+                <i class="fa-solid fa-check me-1"></i>Accepter — {{ nego.buyer_price|floatformat:0 }} DA
+              </button>
+            </div>
+            <!-- Counter -->
+            <div style="background:rgba(230,80,0,.07);border:1px solid rgba(230,80,0,.2);border-radius:var(--r-10);padding:14px;" class="counter-box">
+              <div style="font-weight:700;color:var(--orange);margin-bottom:8px;"><i class="fa-solid fa-arrows-left-right me-2"></i>Faire une contre-offre</div>
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <input type="number" id="counter-price" class="form-control" step="1"
+                    min="{{ nego.buyer_price|floatformat:0 }}" max="{{ nego.original_price|floatformat:0 }}"
+                    placeholder="Votre prix (DA)" oninput="updateCounterPreview()"
+                    style="font-size:1.1rem;font-weight:800;color:var(--orange);text-align:center;">
+                </div>
+                <div class="col-6">
+                  <div id="counter-preview" style="background:var(--surface-2);border-radius:var(--r-8);padding:8px;text-align:center;height:100%;display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:.78rem;color:var(--text-lt);">Entrez un prix</span>
+                  </div>
+                </div>
+              </div>
+              <textarea id="msg-counter" class="form-control" rows="2" placeholder="Expliquez votre contre-offre..." style="margin-bottom:10px;font-size:.84rem;"></textarea>
+              <button onclick="vendorRespond('counter')" class="btn btn-sm" style="background:var(--orange);color:#fff;border:none;font-weight:700;cursor:pointer;border-radius:var(--r-8);padding:8px 18px;">
+                <i class="fa-solid fa-arrows-left-right me-1"></i>Envoyer contre-offre
+              </button>
+            </div>
+            <!-- Reject -->
+            <div style="background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);border-radius:var(--r-10);padding:14px;">
+              <div style="font-weight:700;color:var(--danger);margin-bottom:8px;"><i class="fa-solid fa-xmark me-2"></i>Refuser l'offre</div>
+              <textarea id="msg-reject" class="form-control" rows="2" placeholder="Raison du refus (optionnel)..." style="margin-bottom:10px;font-size:.84rem;"></textarea>
+              <button onclick="vendorRespond('reject')" class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;font-weight:700;cursor:pointer;border-radius:var(--r-8);padding:8px 18px;">
+                <i class="fa-solid fa-xmark me-1"></i>Refuser
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- BUYER: respond to counter-offer -->
+        {% if role == 'buyer' and nego.status == 'counter' %}
+        <div class="action-box mt-4">
+          <h5 style="font-weight:800;margin-bottom:4px;"><i class="fa-solid fa-reply txt-green me-2"></i>Répondre à la contre-offre</h5>
+          <p style="font-size:.84rem;color:var(--text-lt);margin-bottom:14px;">
+            Le vendeur vous propose <strong style="color:var(--orange);font-size:1rem;">{{ nego.counter_price|floatformat:0 }} DA</strong>
+            (vous avez offert {{ nego.buyer_price|floatformat:0 }} DA).
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <textarea id="msg-buyer-accept" class="form-control" rows="2" placeholder="Message (optionnel)..." style="font-size:.82rem;margin-bottom:8px;"></textarea>
+              <button onclick="buyerRespond('accept_counter')" class="btn btn-sm btn-full" style="background:var(--success);color:#fff;border:none;font-weight:700;cursor:pointer;justify-content:center;">
+                <i class="fa-solid fa-check me-1"></i>Accepter {{ nego.counter_price|floatformat:0 }} DA
+              </button>
+            </div>
+            <div>
+              <textarea id="msg-buyer-reject" class="form-control" rows="2" placeholder="Raison du refus..." style="font-size:.82rem;margin-bottom:8px;"></textarea>
+              <button onclick="buyerRespond('reject_counter')" class="btn btn-sm btn-full" style="background:var(--danger);color:#fff;border:none;font-weight:700;cursor:pointer;justify-content:center;">
+                <i class="fa-solid fa-xmark me-1"></i>Refuser
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ═══ SIDEBAR produit ═══ -->
+      <div class="col-lg-5">
+        <div class="card" style="overflow:hidden;position:sticky;top:90px;">
+          <!-- Image -->
+          <div style="height:180px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:70px;">
+            {% if nego.product.images.first %}
+              <img src="{{ nego.product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;">
+            {% else %}{{ nego.product.category.icon|default:"📦" }}{% endif %}
+          </div>
+          <div class="card-body">
+            <div class="product-vendor mb-1"><i class="fa-solid fa-shop"></i> {{ nego.product.store.name }}</div>
+            <h5 style="font-weight:800;margin-bottom:12px;">{{ nego.product.name }}</h5>
+            <!-- Prix recap -->
+            <div style="background:var(--surface-2);border-radius:var(--r-10);padding:14px;margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:.78rem;color:var(--text-lt);">Prix de vente</span>
+                <span style="font-weight:700;">{{ nego.original_price|floatformat:0 }} DA</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:.78rem;color:var(--info);">Offre acheteur</span>
+                <span style="font-weight:800;color:var(--info);">{{ nego.buyer_price|floatformat:0 }} DA</span>
+              </div>
+              {% if nego.counter_price %}
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:.78rem;color:var(--orange);">Contre-offre vendeur</span>
+                <span style="font-weight:800;color:var(--orange);">{{ nego.counter_price|floatformat:0 }} DA</span>
+              </div>
+              {% endif %}
+              {% if nego.final_price %}
+              <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:.78rem;color:var(--success);font-weight:700;">✅ Prix final</span>
+                <span style="font-size:1.1rem;font-weight:900;color:var(--success);">{{ nego.final_price|floatformat:0 }} DA</span>
+              </div>
+              {% endif %}
+            </div>
+            <div style="display:flex;gap:8px;flex-direction:column;">
+              <a href="{% url 'products:detail' nego.product.slug %}" class="btn btn-ghost btn-sm btn-full" style="justify-content:center;">
+                <i class="fa-solid fa-eye me-1"></i>Voir le produit
+              </a>
+              {% if nego.status == 'accepted' and not nego.order and role == 'buyer' %}
+              <a href="{% url 'negotiations:create_order' nego.pk %}" class="btn btn-sm btn-full" style="background:var(--success);color:#fff;border:none;cursor:pointer;justify-content:center;font-weight:700;border-radius:var(--r-8);padding:10px;">
+                <i class="fa-solid fa-shopping-cart me-1"></i>Commander maintenant
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const negoId = {{ nego.pk }};
+
+// FIX: Évaluer le token CSRF au moment du clic (pas à l'init du script)
+// Cherche d'abord dans le cookie, puis dans le input {% csrf_token %} si présent
+function getCsrf() {
+  // 1) Cookie (méthode standard Django)
+  const m = document.cookie.match(/csrftoken=([\w-]+)/);
+  if (m) return m[1];
+  // 2) Input hidden {% csrf_token %} dans la page
+  const inp = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (inp) return inp.value;
+  return '';
+}
+
+// ── Countdown ────────────────────────────────────────────────
+const timerEl = document.getElementById('main-timer');
+if (timerEl) {
+  let secs = parseInt(timerEl.dataset.seconds) || 0;
+  function tick() {
+    if (secs <= 0) { timerEl.textContent = 'Expirée'; timerEl.style.color='var(--danger)'; return; }
+    const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+    timerEl.textContent = h > 0 ? `${h}h ${String(m).padStart(2,'0')}min`
+                        : m > 0 ? `${m}min ${String(s).padStart(2,'0')}s`
+                        : `${s}s`;
+    secs--; setTimeout(tick,1000);
+  }
+  tick();
+}
+
+// ── Counter preview ─────────────────────────────────────────
+{% load l10n %}
+const origPrice  = {{ nego.original_price|unlocalize }};
+const buyerPrice = {{ nego.buyer_price|unlocalize }};
+function updateCounterPreview() {
+  const val  = parseFloat(document.getElementById('counter-price')?.value) || 0;
+  const prev = document.getElementById('counter-preview');
+  if (!prev) return;
+  if (!val || val <= buyerPrice || val >= origPrice) {
+    prev.innerHTML = '<span style="font-size:.72rem;color:var(--danger);">Entre '+Math.ceil(buyerPrice)+' et '+Math.floor(origPrice-1)+' DA</span>';
+    return;
+  }
+  const disc = ((1 - val/origPrice)*100).toFixed(1);
+  prev.innerHTML = `<div style="text-align:center;"><div style="font-size:1.0rem;font-weight:900;color:var(--orange);">${Math.round(val).toLocaleString('fr-DZ')} DA</div><div style="font-size:.7rem;color:var(--text-lt);">−${disc}%</div></div>`;
+}
+
+// ── Vendor respond ───────────────────────────────────────────
+async function vendorRespond(action) {
+  const msgMap = { accept: 'msg-accept', reject: 'msg-reject', counter: 'msg-counter' };
+  const body   = new URLSearchParams({ action });
+  body.set('vendor_message', document.getElementById(msgMap[action])?.value || '');
+  if (action === 'counter') {
+    const cp = document.getElementById('counter-price')?.value;
+    if (!cp) { showToast('Entrez un prix pour la contre-offre.','error'); return; }
+    body.set('counter_price', cp);
+    body.set('counter_message', document.getElementById('msg-counter')?.value || '');
+  }
+  await postNego(`/negotiations/${negoId}/vendor-respond/`, body);
+}
+
+// ── Buyer respond ────────────────────────────────────────────
+async function buyerRespond(action) {
+  const body = new URLSearchParams({ action });
+  body.set('buyer_counter_message',
+    action === 'accept_counter'
+      ? document.getElementById('msg-buyer-accept')?.value || ''
+      : document.getElementById('msg-buyer-reject')?.value || '');
+  await postNego(`/negotiations/${negoId}/buyer-respond/`, body);
+}
+
+async function postNego(url, body) {
+  const csrfToken = getCsrf();
+  if (!csrfToken) {
+    alert('Session expirée. Veuillez actualiser la page.');
+    return;
+  }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+
+    // Si réponse non-JSON (ex: redirect login 302, CSRF 403), on le détecte
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      console.error('Réponse non-JSON:', res.status, await res.text().catch(() => ''));
+      if (res.status === 403) {
+        alert('Erreur CSRF. Actualisez la page et réessayez.');
+      } else if (res.status === 302 || res.redirected) {
+        alert('Session expirée. Reconnectez-vous.');
+        window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+      } else {
+        alert('Erreur serveur (' + res.status + '). Réessayez.');
+      }
+      return;
+    }
+
+    const data = await res.json();
+    if (data.ok) {
+      // showToast est défini dans forsa.js (window.load) — disponible après click
+      if (typeof showToast === 'function') showToast(data.msg, 'success');
+      else alert(data.msg);
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      if (typeof showToast === 'function') showToast(data.error || 'Erreur.', 'error');
+      else alert(data.error || 'Erreur.');
+    }
+  } catch(e) {
+    console.error('postNego error:', e);
+    if (typeof showToast === 'function') showToast('Erreur réseau : ' + e.message, 'error');
+    else alert('Erreur réseau : ' + e.message);
+  }
+}
+</script>
+{% endblock %}

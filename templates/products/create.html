@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau produit — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-circle-plus txt-green me-2"></i>Nouveau produit</h1>
+        <div class="breadcrumb">
+          <a href="{% url 'home' %}">Accueil</a><span>/</span>
+          <a href="{% url 'stores:my_store' %}">Ma boutique</a><span>/</span>Ajouter
+        </div>
+      </div>
+      <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-house"></i> Accueil</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <!-- Infos -->
+          <div class="card card-body mb-4">
+            <h5 style="font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+              <i class="fa-solid fa-circle-info me-2 txt-green"></i>Informations générales
+            </h5>
+            <div class="form-group"><label class="form-label">Nom du produit <span style="color:var(--danger);">*</span></label>{{ form.name }}{% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}</div>
+            <div class="form-group"><label class="form-label">Catégorie <span style="color:var(--danger);">*</span></label>{{ form.category }}{% if form.category.errors %}<div class="form-error">{{ form.category.errors.0 }}</div>{% endif %}</div>
+            <div class="form-group"><label class="form-label">Description</label>{{ form.description }}</div>
+          </div>
+          <!-- Photos -->
+          <div class="card card-body mb-4">
+            <h5 style="font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+              <i class="fa-solid fa-images me-2 txt-green"></i>Photos du produit
+            </h5>
+            <div id="dropZone" style="border:2px dashed var(--border-md);border-radius:var(--r-12);padding:32px;text-align:center;cursor:pointer;transition:var(--ease);background:var(--bg);"
+                 onclick="document.getElementById('imageInput').click()"
+                 ondragover="event.preventDefault();this.style.borderColor='var(--green)';this.style.background='var(--green-xl)'"
+                 ondragleave="this.style.borderColor='var(--border-md)';this.style.background='var(--bg)'">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size:2.5rem;color:var(--text-xl);display:block;margin-bottom:10px;"></i>
+              <div style="font-weight:600;color:var(--text-md);">Glissez vos photos ou cliquez pour parcourir</div>
+              <div style="font-size:.78rem;color:var(--text-lt);margin-top:6px;">PNG, JPG · Max 5MB · La 1ère photo sera la principale</div>
+              <input type="file" id="imageInput" name="images" multiple accept="image/*" style="display:none;">
+            </div>
+            <div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <!-- Prix & Stock -->
+        <div class="col-lg-4">
+          <div class="card card-body" style="position:sticky;top:88px;">
+            <h5 style="font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+              <i class="fa-solid fa-money-bill-wave me-2 txt-green"></i>Prix & Réduction
+            </h5>
+            <div class="form-group">
+              <label class="form-label">Prix original (DA) <span style="color:var(--danger);">*</span></label>
+              {{ form.original_price }}
+              {% if form.original_price.errors %}<div class="form-error">{{ form.original_price.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Réduction manuelle vendeur -->
+            <div class="form-group">
+              <label class="form-label">
+                <i class="fa-solid fa-percent me-1 txt-orange"></i>
+                Votre réduction (%)
+              </label>
+              {{ form.discount_pct }}
+              {% if form.discount_pct.errors %}<div class="form-error">{{ form.discount_pct.errors.0 }}</div>{% endif %}
+              <div class="form-hint">0% = pas de réduction vendeur</div>
+            </div>
+
+            <!-- Preview prix calculé -->
+            <div id="pricePreview" style="background:var(--surface-3);border-radius:var(--r-10);padding:12px;margin-bottom:14px;display:none;">
+              <div style="font-size:.72rem;color:var(--text-lt);margin-bottom:4px;">Prix affiché après votre réduction :</div>
+              <div style="font-size:1.3rem;font-weight:900;color:var(--green);" id="calculatedPrice">— DA</div>
+              <div style="font-size:.75rem;color:var(--success);" id="calculatedSaving"></div>
+            </div>
+
+            <!-- Note auto-discount FORSA -->
+            <div style="background:var(--green-xl);border-radius:var(--r-8);padding:10px 12px;margin-bottom:14px;font-size:.78rem;color:var(--green-dk);">
+              <i class="fa-solid fa-robot me-1"></i><strong>Réductions automatiques FORSA</strong> (s'ajoutent à la vôtre) :<br>
+              <span style="display:block;margin-top:5px;line-height:1.8;">
+                ≤14j → -5% · ≤7j → -10% · ≤3j → -30% · ≤1j → -50%
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Date de péremption <span style="color:var(--danger);">*</span></label>
+              {{ form.expiry_date }}
+              {% if form.expiry_date.errors %}<div class="form-error">{{ form.expiry_date.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="row g-2">
+              <div class="col-7">
+                <div class="form-group">
+                  <label class="form-label">Quantité <span style="color:var(--danger);">*</span></label>
+                  {{ form.quantity }}
+                </div>
+              </div>
+              <div class="col-5">
+                <div class="form-group">
+                  <label class="form-label">Unité</label>
+                  {{ form.unit }}
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-md btn-full mt-2">
+              <i class="fa-solid fa-circle-check"></i> Publier le produit
+            </button>
+            <a href="{% url 'stores:my_store' %}" class="btn btn-ghost btn-md btn-full mt-2" style="justify-content:center;">Annuler</a>
+          </div>
+        </div>
+      </div>
+    </form>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live price preview
+const origInput = document.getElementById('{{ form.original_price.auto_id }}');
+const discInput = document.getElementById('{{ form.discount_pct.auto_id }}');
+function updatePreview() {
+  const orig = parseFloat(origInput?.value) || 0;
+  const disc = parseFloat(discInput?.value) || 0;
+  const prev = document.getElementById('pricePreview');
+  const calc = document.getElementById('calculatedPrice');
+  const save = document.getElementById('calculatedSaving');
+  if (orig > 0) {
+    const final  = orig * (1 - disc / 100);
+    const saving = orig - final;
+    calc.textContent = Math.round(final).toLocaleString('fr-DZ') + ' DA';
+    save.textContent = disc > 0
+      ? `Économie acheteur : ${Math.round(saving).toLocaleString('fr-DZ')} DA (−${Math.round(disc)}%)`
+      : 'Aucune réduction vendeur';
+    prev.style.display = 'block';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+origInput?.addEventListener('input', updatePreview);
+discInput?.addEventListener('input', updatePreview);
+
+// Image preview
+document.getElementById('imageInput')?.addEventListener('change', function() {
+  const prev = document.getElementById('imagePreview');
+  prev.innerHTML = '';
+  [...this.files].forEach((f, i) => {
+    const r = new FileReader();
+    r.onload = e => {
+      prev.innerHTML += `<div style="position:relative;width:80px;height:80px;">
+        <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-10);border:2px solid ${i===0?'var(--green)':'var(--border-md)'}">
+        ${i===0?'<span style="position:absolute;bottom:0;left:0;right:0;background:var(--green);color:#fff;font-size:.55rem;text-align:center;border-radius:0 0 8px 8px;padding:2px;">Principale</span>':''}
+      </div>`;
+    };
+    r.readAsDataURL(f);
+  });
+});
+</script>
+{% endblock %}

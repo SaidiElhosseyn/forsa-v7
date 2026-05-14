@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}{% if store %}Modifier{% else %}Créer{% endif %} ma boutique — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+#vendor-map{height:320px;border-radius:var(--r-12);border:1.5px solid var(--border);margin-bottom:8px;}
+.leaflet-container{font-family:var(--font);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">
+          <i class="fa-solid fa-shop txt-green me-2"></i>
+          {% if store %}Modifier ma boutique{% else %}Créer ma boutique{% endif %}
+        </h1>
+        <div class="breadcrumb">
+          <a href="{% url 'home' %}">Accueil</a><span>/</span>
+          <a href="{% url 'dashboard:vendor' %}">Dashboard</a><span>/</span>
+          {% if store %}{{ store.name }}{% else %}Nouvelle boutique{% endif %}
+        </div>
+      </div>
+      <a href="{% url 'home' %}" class="btn btn-ghost btn-sm">
+        <i class="fa-solid fa-house"></i> Page d'accueil
+      </a>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-lg-9">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          <div class="card card-body mb-4">
+            <h5 style="font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+              <i class="fa-solid fa-circle-info me-2 txt-green"></i>Informations générales
+            </h5>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <div class="form-group">
+                  <label class="form-label">Nom de la boutique <span style="color:var(--danger);">*</span></label>
+                  {{ form.name }}
+                  {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label class="form-label">Téléphone</label>
+                  {{ form.phone }}
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  {{ form.description }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Wilaya <span style="color:var(--danger);">*</span></label>
+                  {{ form.wilaya }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Adresse</label>
+                  {{ form.address }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Logo</label>
+                  {{ form.logo }}
+                  {% if store and store.logo %}<div style="margin-top:6px;"><img src="{{ store.logo.url }}" style="height:40px;border-radius:8px;"></div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Bannière</label>
+                  {{ form.banner }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ CARTE POSITION GPS ═══ -->
+          <div class="card card-body mb-4">
+            <h5 style="font-weight:800;margin-bottom:6px;">
+              <i class="fa-solid fa-map-location-dot me-2 txt-green"></i>Position de votre boutique sur la carte
+            </h5>
+            <p style="font-size:.84rem;color:var(--text-lt);margin-bottom:14px;">
+              <i class="fa-solid fa-circle-info me-1 txt-green"></i>Cliquez sur la carte pour placer votre boutique. Les acheteurs verront votre boutique sur la carte et pourront vous trouver facilement.
+            </p>
+
+            <!-- Bouton localisation automatique -->
+            <button type="button" onclick="autoLocate()" class="btn btn-ghost btn-sm mb-3" style="width:auto;">
+              <i class="fa-solid fa-location-crosshairs"></i> Utiliser ma position actuelle
+            </button>
+
+            <!-- Map -->
+            <div id="vendor-map"></div>
+
+            <!-- Coordonnées (mises à jour par la carte) -->
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label"><i class="fa-solid fa-up-down me-1 txt-green"></i>Latitude</label>
+                  {{ form.latitude }}
+                  {% if form.latitude.errors %}<div class="form-error">{{ form.latitude.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label"><i class="fa-solid fa-left-right me-1 txt-green"></i>Longitude</label>
+                  {{ form.longitude }}
+                  {% if form.longitude.errors %}<div class="form-error">{{ form.longitude.errors.0 }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+            <div id="coord-status" style="font-size:.8rem;color:var(--text-lt);"></div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fa-solid fa-check"></i>
+              {% if store %}Enregistrer les modifications{% else %}Créer ma boutique{% endif %}
+            </button>
+            <a href="{% url 'dashboard:vendor' %}" class="btn btn-ghost btn-md">Annuler</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Initial coords ──────────────────────────────────────────
+const existingLat = parseFloat("{{ store.latitude|default:'' }}") || null;
+const existingLng = parseFloat("{{ store.longitude|default:'' }}") || null;
+const centerLat   = existingLat || 28.0;
+const centerLng   = existingLng || 2.7;
+const initZoom    = existingLat ? 13 : 5;
+
+// ── Map init ────────────────────────────────────────────────
+const map = L.map('vendor-map', {
+  center: [centerLat, centerLng],
+  zoom:   initZoom,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+// ── Custom icon ─────────────────────────────────────────────
+const shopIcon = L.divIcon({
+  className: '',
+  html: `<div style="width:38px;height:38px;border-radius:50%;background:var(--green);
+              border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;font-size:16px;">🏪</div>`,
+  iconSize: [38, 38],
+  iconAnchor: [19, 19],
+  popupAnchor: [0, -22],
+});
+
+// ── Marker ──────────────────────────────────────────────────
+let marker = null;
+
+function placeMarker(lat, lng) {
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([lat, lng], { icon: shopIcon, draggable: true }).addTo(map);
+  marker.bindPopup('<div style="font-size:.85rem;font-weight:700;"><i class="fa-solid fa-shop me-2" style="color:var(--green);"></i>Ma boutique</div>').openPopup();
+  marker.on('dragend', e => {
+    const p = e.target.getLatLng();
+    updateCoords(p.lat, p.lng);
+  });
+  updateCoords(lat, lng);
+}
+
+function updateCoords(lat, lng) {
+  const latF = lat.toFixed(6);
+  const lngF = lng.toFixed(6);
+  document.getElementById('id_latitude').value  = latF;
+  document.getElementById('id_longitude').value = lngF;
+  const st = document.getElementById('coord-status');
+  if (st) st.innerHTML = `<i class="fa-solid fa-check-circle me-1" style="color:var(--success);"></i>Position enregistrée : ${latF}, ${lngF}`;
+}
+
+// Click on map → place marker
+map.on('click', e => {
+  placeMarker(e.latlng.lat, e.latlng.lng);
+  map.setView(e.latlng, Math.max(map.getZoom(), 13));
+});
+
+// Place existing marker if coords are set
+if (existingLat && existingLng) {
+  placeMarker(existingLat, existingLng);
+}
+
+// ── Auto-localisation ───────────────────────────────────────
+function autoLocate() {
+  if (!navigator.geolocation) {
+    showToast && showToast('Géolocalisation non supportée.', 'warning');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      map.setView([lat, lng], 15, { animate: true });
+      placeMarker(lat, lng);
+      showToast && showToast('Position trouvée !', 'success');
+    },
+    () => {
+      alert('Impossible d\'obtenir votre position. Cliquez manuellement sur la carte.');
+    },
+    { timeout: 8000 }
+  );
+}
+
+// ── Sync manual input → map ─────────────────────────────────
+function syncFromInputs() {
+  const lat = parseFloat(document.getElementById('id_latitude').value);
+  const lng = parseFloat(document.getElementById('id_longitude').value);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    placeMarker(lat, lng);
+    map.setView([lat, lng], 13, { animate: true });
+  }
+}
+['id_latitude', 'id_longitude'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('blur', syncFromInputs);
+});
+</script>
+{% endblock %}

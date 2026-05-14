@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}404 — Page introuvable{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="error-code">404</div>
+  <h1 class="error-title">Page introuvable</h1>
+  <p class="error-sub">La page que vous cherchez n'existe pas ou a été déplacée.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="{% url 'home' %}" class="btn btn-primary btn-md"><i class="fa-solid fa-house"></i> Accueil</a>
+    <a href="{% url 'products:catalog' %}" class="btn btn-ghost btn-md"><i class="fa-solid fa-grid-2"></i> Catalogue</a>
+  </div>
+</div>
+{% endblock %}

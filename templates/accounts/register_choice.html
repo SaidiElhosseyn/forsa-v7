@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Créer un compte — FORSA{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div style="min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;">
+  {% load static %}
+  <a href="{% url 'home' %}" style="text-decoration:none;margin-bottom:28px;"><img src="{% static 'images/forsa_logo.png' %}" alt="FORSA" style="height:60px;width:auto;margin:0 auto;display:block;"></a>
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="font-size:1.7rem;font-weight:900;letter-spacing:-.03em;margin-bottom:8px;">Rejoignez FORSA — فرصة</h1>
+    <p style="color:var(--text-lt);">Choisissez votre type de compte pour commencer</p>
+  </div>
+  <div class="row g-4 justify-content-center" style="max-width:700px;width:100%;">
+    <div class="col-md-5">
+      <a href="{% url 'accounts:register_customer' %}" style="text-decoration:none;">
+        <div class="role-card">
+          <span class="role-emoji">🛍️</span>
+          <h4>Je suis acheteur</h4>
+          <p>Parcourez des produits de qualité à prix réduits. Obtenez 100 000 DA sur votre carte virtuelle.</p>
+          <ul style="text-align:left;font-size:.83rem;color:var(--text-lt);margin-bottom:20px;padding-left:20px;">
+            <li>Accès à 14 catégories de produits</li>
+            <li>Carte virtuelle 100 000 DA offerte</li>
+            <li>Livraison dans 48 wilayas</li>
+            <li>Suivi commandes en temps réel</li>
+          </ul>
+          <div class="btn btn-primary btn-md btn-full"><i class="fa-solid fa-user-plus"></i> Créer un compte acheteur</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-5">
+      <a href="{% url 'accounts:register_vendor' %}" style="text-decoration:none;">
+        <div class="role-card">
+          <span class="role-emoji">🏪</span>
+          <h4>Je suis vendeur</h4>
+          <p>Ouvrez votre boutique, vendez vos produits avant péremption et réduisez vos pertes.</p>
+          <ul style="text-align:left;font-size:.83rem;color:var(--text-lt);margin-bottom:20px;padding-left:20px;">
+            <li>Boutique personnalisée</li>
+            <li>Réduction automatique intelligente</li>
+            <li>Dashboard analytique complet</li>
+            <li>Gestion des commandes simple</li>
+          </ul>
+          <div class="btn btn-secondary btn-md btn-full"><i class="fa-solid fa-store"></i> Ouvrir ma boutique</div>
+        </div>
+      </a>
+    </div>
+  </div>
+  <p style="margin-top:24px;color:var(--text-lt);font-size:.875rem;">Déjà un compte ? <a href="{% url 'accounts:login' %}" style="color:var(--green);font-weight:600;">Se connecter</a></p>
+</div>
+{% endblock %}

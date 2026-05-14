@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Suivi commande #{{ order.order_number }} — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-box-open txt-green me-2"></i>Suivi de commande</h1>
+        <div class="breadcrumb"><a href="{% url 'orders:list' %}">Commandes</a><span>/</span>{{ order.order_number }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        {% if order.status == 'pending' or order.status == 'confirmed' %}
+        <a href="{% url 'orders:cancel' order.order_number %}" style="font-size:.82rem;color:var(--danger);text-decoration:none;"><i class="fa-solid fa-xmark me-1"></i>Annuler</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ══ ORDER TRACKING HEADER ══ -->
+    <div class="order-track-header">
+      {% if order.status == 'delivered' %}
+      <div class="order-confirmed-badge" style="background:var(--success);">
+        <i class="fa-solid fa-circle-check"></i> Commande livrée !
+      </div>
+      {% elif order.status == 'cancelled' %}
+      <div class="order-confirmed-badge" style="background:var(--danger);">
+        <i class="fa-solid fa-circle-xmark"></i> Commande annulée
+      </div>
+      {% else %}
+      <div class="order-confirmed-badge">
+        <i class="fa-solid fa-circle-check"></i> Commande confirmée !
+      </div>
+      {% endif %}
+
+      <p style="color:var(--text-md);font-size:.875rem;margin-bottom:16px;">
+        Merci pour votre confiance !<br>
+        Votre commande <strong style="color:var(--green);">{{ order.order_number }}</strong> est en cours de traitement.
+      </p>
+
+      <!-- Step timeline -->
+      <div class="order-track-steps">
+        <!-- Step 1: Commande confirmée -->
+        <div class="track-step done">
+          <div class="track-step-circle"><i class="fa-solid fa-check" style="font-size:.65rem;"></i></div>
+          <div class="track-step-label">Commande<br>confirmée</div>
+          <div class="track-step-date">{{ order.created_at|date:"d/m · H:i" }}</div>
+        </div>
+        <div class="track-step-line {% if order.status == 'confirmed' or order.status == 'shipped' or order.status == 'delivered' %}done{% endif %}"></div>
+
+        <!-- Step 2: Préparation -->
+        <div class="track-step {% if order.status == 'confirmed' %}active{% elif order.status == 'shipped' or order.status == 'delivered' %}done{% endif %}">
+          <div class="track-step-circle">
+            {% if order.status == 'shipped' or order.status == 'delivered' %}<i class="fa-solid fa-check" style="font-size:.65rem;"></i>{% else %}2{% endif %}
+          </div>
+          <div class="track-step-label">Préparation</div>
+          <div class="track-step-date">{% if order.status != 'pending' %}{{ order.updated_at|date:"d/m · H:i" }}{% endif %}</div>
+        </div>
+        <div class="track-step-line {% if order.status == 'shipped' or order.status == 'delivered' %}done{% endif %}"></div>
+
+        <!-- Step 3: En livraison -->
+        <div class="track-step {% if order.status == 'shipped' %}active{% elif order.status == 'delivered' %}done{% endif %}">
+          <div class="track-step-circle">
+            {% if order.status == 'delivered' %}<i class="fa-solid fa-check" style="font-size:.65rem;"></i>{% else %}3{% endif %}
+          </div>
+          <div class="track-step-label">En<br>livraison</div>
+          <div class="track-step-date">{% if order.status == 'shipped' or order.status == 'delivered' %}{{ order.updated_at|date:"d/m · H:i" }}{% endif %}</div>
+        </div>
+        <div class="track-step-line {% if order.status == 'delivered' %}done{% endif %}"></div>
+
+        <!-- Step 4: Livrée -->
+        <div class="track-step {% if order.status == 'delivered' %}done{% endif %}">
+          <div class="track-step-circle">
+            {% if order.status == 'delivered' %}<i class="fa-solid fa-check" style="font-size:.65rem;"></i>{% else %}4{% endif %}
+          </div>
+          <div class="track-step-label">Livrée</div>
+          <div class="track-step-date">{% if order.status == 'delivered' %}{{ order.updated_at|date:"d/m · H:i" }}{% endif %}</div>
+        </div>
+      </div>
+
+      <!-- ETA -->
+      {% if order.status == 'pending' or order.status == 'confirmed' or order.status == 'shipped' %}
+      <div class="order-eta">
+        <i class="fa-solid fa-clock me-2 txt-green"></i>
+        <strong>Estimation de la livraison :</strong>
+        {% if order.delivery_method == 'express' %}Demain entre 10:00 et 14:00
+        {% elif order.delivery_method == 'pickup' %}Disponible immédiatement au magasin
+        {% else %}Sous 2–3 jours ouvrés{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ══ ORDER CONTENT ══ -->
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <!-- Articles -->
+        <div class="table-wrap mb-4">
+          <div class="table-header"><h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-box-open me-2 txt-green"></i>Articles ({{ order.items.count }})</h5></div>
+          <table>
+            <thead><tr><th>Produit</th><th>Prix unitaire</th><th>Quantité</th><th>Sous-total</th></tr></thead>
+            <tbody>
+              {% for item in order.items.all %}
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-2);">
+                      {% if item.product.images.first %}<img src="{{ item.product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;">{% else %}<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">{{ item.product.category.icon|default:"📦" }}</div>{% endif %}
+                    </div>
+                    <div>
+                      <a href="{% url 'products:detail' item.product.slug %}" style="font-weight:600;font-size:.875rem;color:var(--text);">{{ item.product.name }}</a>
+                      <div style="font-size:.72rem;color:var(--text-lt);">{{ item.product.store.name }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-size:.875rem;">{{ item.unit_price|floatformat:0 }} DA</td>
+                <td style="font-size:.875rem;">×{{ item.quantity }}</td>
+                <td style="font-weight:800;color:var(--green);">{{ item.subtotal|floatformat:0 }} DA</td>
+              </tr>
+              {% endfor %}
+              <tr>
+                <td colspan="3" style="text-align:right;font-weight:800;font-size:.95rem;padding:14px 16px;">Total</td>
+                <td style="font-size:1.2rem;font-weight:900;color:var(--green);padding:14px 16px;">{{ order.total_amount|floatformat:0 }} DA</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <!-- Delivery info -->
+        <div class="card card-body mb-3">
+          <h6 style="margin-bottom:12px;font-weight:700;"><i class="fa-solid fa-truck me-2 txt-green"></i>Livraison</h6>
+          <div style="font-size:.875rem;color:var(--text-md);line-height:2.2;">
+            <div><i class="fa-solid fa-location-dot me-2 txt-green"></i>Wilaya {{ order.delivery_wilaya }}</div>
+            <div><i class="fa-solid fa-house me-2 txt-green"></i>{{ order.delivery_address }}</div>
+            <div><i class="fa-solid fa-phone me-2 txt-green"></i>{{ order.delivery_phone }}</div>
+            {% if order.delivery_method %}
+            <div><i class="fa-solid fa-truck-fast me-2 txt-green"></i>{{ order.get_delivery_method_display|default:order.delivery_method }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if payment %}
+        <div class="card card-body mb-3">
+          <h6 style="margin-bottom:12px;font-weight:700;"><i class="fa-solid fa-credit-card me-2 txt-green"></i>Paiement</h6>
+          <div style="font-size:.875rem;color:var(--text-md);line-height:1.9;">
+            <div><strong>Mode :</strong> {{ payment.get_method_display }}</div>
+            <div><strong>Montant :</strong> {{ payment.amount|floatformat:0 }} DA</div>
+            <div><strong>Statut :</strong>
+              <span class="badge {% if payment.status == 'completed' %}badge-green{% elif payment.status == 'refunded' %}badge-blue{% else %}badge-yellow{% endif %}">{{ payment.get_status_display }}</span>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Delivery visual -->
+        <div style="text-align:center;padding:20px;background:var(--green-xl);border-radius:var(--r-12);border:1px solid var(--green);">
+          <i class="fa-solid fa-motorcycle" style="font-size:2.5rem;color:var(--green);"></i>
+          <div style="font-size:.8rem;color:var(--green);font-weight:600;margin-top:8px;">
+            {% if order.status == 'delivered' %}Livraison réussie !
+            {% elif order.status == 'shipped' %}En route vers chez vous
+            {% elif order.status == 'pickup' %}Disponible au magasin
+            {% else %}En préparation{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

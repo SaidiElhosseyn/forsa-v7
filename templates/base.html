@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>{% block title %}FORSA — فرصة{% endblock %} | FORSA فرصة</title>
+<meta name="description" content="FORSA فرصة — Cosmétiques, Santé, Bébé, Maison à prix réduits jusqu'à -70%. Livraison 48 wilayas Algérie.">
+<meta name="theme-color" content="#1A6B2F">
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Bootstrap grid only -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- FORSA CSS -->
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/forsa.css' %}">
+{% block extra_css %}{% endblock %}
+<script>(()=>{const t=localStorage.getItem('forsa-theme')||'light';document.documentElement.setAttribute('data-theme',t)})();</script>
+</head>
+<body>
+
+<!-- PAGE LOADER -->
+<div id="pageLoader" class="page-loader">
+  <div>
+    <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA" style="height:60px;width:auto;margin:0 auto 16px;display:block;opacity:.7;">
+    <div class="loader-ring" style="margin:0 auto;"></div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="toast-container">
+  {% if messages %}
+    {% for message in messages %}
+    <div class="toast-item {% if message.tags == 'success' %}success{% elif message.tags == 'error' %}error{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}">
+      <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'error' %}fa-circle-xmark{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  {% endif %}
+</div>
+
+{% block full_header %}
+
+<!-- ANNOUNCEMENT BAR -->
+<div id="announceBar" class="announce-bar">
+  <span><i class="fa-solid fa-tag me-2"></i>Offre de lancement — Inscrivez-vous et obtenez <strong style="color:var(--gold-lt);">100 000 DA</strong> sur votre carte virtuelle FORSA !</span>
+  <button id="announceClose" class="announce-close"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="mainNavbar">
+  <div class="container-forsa">
+    <div class="navbar-inner">
+
+      <!-- Logo -->
+      <a href="{% url 'home' %}" class="nav-logo">
+        <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA فرصة">
+      </a>
+
+      <!-- Search -->
+      <div class="nav-search-wrap" style="position:relative;flex:1;min-width:0;max-width:520px;">
+      <form action="{% url 'products:catalog' %}" method="get" class="nav-search" autocomplete="off" id="navSearchForm">
+        <select name="category" title="Catégorie" aria-label="Catégorie">
+          <option value="">Toutes catégories</option>
+          {% for cat in nav_categories %}
+          <option value="{{ cat.slug }}"
+            {% if request.GET.category == cat.slug %}selected{% endif %}>
+            {{ cat.icon }} {{ cat.name|truncatechars:16 }}
+          </option>
+          {% endfor %}
+        </select>
+        <input type="text" name="q" id="navSearchInput" placeholder="Rechercher un produit, une marque..." value="{{ request.GET.q }}" aria-label="Recherche" autocomplete="off">
+        <button type="submit" class="nav-search-btn"><i class="fa-solid fa-magnifying-glass"></i> <span class="d-none d-xl-inline">Rechercher</span></button>
+      </form>
+      <!-- Autocomplete dropdown -->
+      <div id="searchAutocomplete" class="search-ac-dropdown" style="display:none;"></div>
+      </div>
+
+      <!-- Center nav links (desktop) -->
+      <div class="nav-links d-none d-xl-flex" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <a href="{% url 'home' %}" class="nav-page-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Accueil</a>
+        <a href="{% url 'products:catalog' %}" class="nav-page-link {% if request.resolver_match.url_name == 'catalog' %}active{% endif %}">Offres</a>
+        <a href="{% url 'products:categories' %}" class="nav-page-link {% if request.resolver_match.url_name == 'categories' %}active{% endif %}">Catégories</a>
+        <a href="{% url 'home' %}#how-it-works" class="nav-page-link">Comment ça marche ?</a>
+        <a href="{% url 'home' %}#about" class="nav-page-link">À propos</a>
+      </div>
+
+      <!-- Actions -->
+      <div class="nav-actions">
+        <!-- Theme -->
+        <button class="theme-switch" title="Thème clair/sombre" aria-label="Toggle theme" style="margin:0 4px;"></button>
+
+        {% if user.is_authenticated %}
+          <!-- Wishlist -->
+          <a href="{% url 'accounts:wishlist' %}" class="nav-action" title="Mes favoris" aria-label="Favoris">
+            <i class="fa-regular fa-heart"></i>
+            <span>Favoris</span>
+          </a>
+
+          <!-- Notifications Bell -->
+          <div class="nav-dropdown" id="notifBell">
+            <button class="nav-action" aria-label="Notifications" title="Notifications" aria-haspopup="true" style="position:relative;">
+              <i class="fa-solid fa-bell" id="notifBellIcon"></i>
+              <span>Alertes</span>
+              <span id="notifBadge" style="display:none;position:absolute;top:0;right:0;background:var(--danger);color:#fff;min-width:18px;height:18px;font-size:.58rem;font-weight:800;padding:0 4px;border-radius:99px;align-items:center;justify-content:center;line-height:18px;text-align:center;">0</span>
+            </button>
+            <div class="nav-dropdown-menu" style="min-width:340px;right:-20px;padding:0;">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:8px;">
+                  <i class="fa-solid fa-bell txt-green"></i>Notifications
+                  <span id="notifUnreadLabel" style="display:none;background:var(--danger);color:#fff;font-size:.62rem;padding:1px 6px;border-radius:99px;font-weight:700;"></span>
+                </div>
+                <button onclick="markAllReadNav()" style="font-size:.75rem;color:var(--green);background:none;border:none;cursor:pointer;font-weight:600;padding:4px 8px;border-radius:6px;" title="Tout marquer comme lu">
+                  <i class="fa-solid fa-check-double me-1"></i>Tout lire
+                </button>
+              </div>
+              <div id="notifList" style="max-height:380px;overflow-y:auto;">
+                <div style="padding:32px 16px;text-align:center;color:var(--text-lt);font-size:.84rem;">
+                  <i class="fa-regular fa-bell" style="font-size:1.8rem;display:block;margin-bottom:8px;"></i>
+                  Aucune notification
+                </div>
+              </div>
+              <div style="padding:10px 16px;border-top:1px solid var(--border);">
+                <a href="{% url 'notifications:list' %}" class="btn btn-ghost btn-sm btn-full" style="justify-content:center;font-size:.82rem;">
+                  <i class="fa-solid fa-list me-1"></i>Voir toutes les notifications
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cart -->
+          <a href="{% url 'orders:cart' %}" class="nav-action" title="Mon panier" aria-label="Panier">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span>Panier</span>
+            <span class="badge cart-count cart-badge" style="{% if cart_items_count == 0 %}display:none{% endif %}">{{ cart_items_count }}</span>
+          </a>
+
+          <!-- Account -->
+          <div class="nav-dropdown">
+            <button class="nav-action" aria-label="Mon compte" aria-haspopup="true">
+              <i class="fa-solid fa-circle-user"></i>
+              <span>{{ user.first_name|default:"Compte" }}</span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <div class="nav-dropdown-header">
+                <div style="font-size:.68rem;color:var(--text-lt);">Connecté en tant que</div>
+                <div style="font-weight:800;font-size:.9rem;">{{ user.get_full_name|default:user.username }}</div>
+                <span class="badge badge-green mt-1">{{ user.get_role_display }}</span>
+              </div>
+              <a href="{% url 'dashboard:index' %}"   class="nav-dropdown-item"><i class="fa-solid fa-gauge-high txt-green"></i> Dashboard</a>
+              <a href="{% url 'accounts:profile' %}"  class="nav-dropdown-item"><i class="fa-solid fa-user-gear"></i> Mon Profil</a>
+              <a href="{% url 'orders:list' %}"        class="nav-dropdown-item"><i class="fa-solid fa-box-open"></i> Mes Commandes</a>
+              {% if user.is_customer %}
+              <a href="{% url 'payments:virtual_card' %}" class="nav-dropdown-item"><i class="fa-solid fa-credit-card"></i> Carte Virtuelle</a>
+              {% endif %}
+              {% if user.is_vendor %}
+              <a href="{% url 'stores:my_store' %}"   class="nav-dropdown-item"><i class="fa-solid fa-store txt-green"></i> Ma Boutique</a>
+              <a href="{% url 'products:create' %}"   class="nav-dropdown-item"><i class="fa-solid fa-circle-plus"></i> Ajouter Produit</a>
+              {% endif %}
+              <div class="nav-dropdown-divider"></div>
+              <a href="{% url 'accounts:logout' %}"   class="nav-dropdown-item danger"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</a>
+            </div>
+          </div>
+
+        {% else %}
+          <a href="{% url 'accounts:login' %}" class="nav-action" title="Connexion">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Connexion</span>
+          </a>
+          <a href="{% url 'accounts:register' %}" class="nav-action nav-btn-register">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>S'inscrire</span>
+          </a>
+        {% endif %}
+
+        <!-- Hamburger -->
+        <button id="hamburger" class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- CATEGORY NAVBAR -->
+{% block catnav %}
+<nav class="cat-navbar" aria-label="Catégories">
+  <div class="container-forsa">
+    <div class="cat-navbar-inner">
+      <a href="{% url 'products:catalog' %}" class="cat-all{% if request.resolver_match.url_name == 'catalog' %} active{% endif %}" title="Toutes les offres">
+        <i class="fa-solid fa-tag"></i> Offres
+      </a>
+      <a href="{% url 'products:categories' %}" class="cat-nav-item{% if request.resolver_match.url_name == 'categories' %} active{% endif %}" title="Catégories">
+        <i class="fa-solid fa-border-all"></i> Catégories
+      </a>
+      {% for cat in nav_categories %}
+      <a href="{% url 'products:catalog' %}?category={{ cat.slug }}"
+         class="cat-nav-item{% if request.GET.category == cat.slug %} active{% endif %}"
+         title="{{ cat.name }}">
+        <span class="emoji">{{ cat.icon }}</span> {{ cat.name|truncatechars:12 }}
+      </a>
+      {% endfor %}
+      <a href="{% url 'products:catalog' %}?sort=discount" class="cat-nav-item cat-nav-hot">
+        <i class="fa-solid fa-fire me-1"></i> Offres -70%
+      </a>
+      <a href="{% url 'stores:map' %}" class="cat-nav-item" title="Carte des boutiques">
+        <i class="fa-solid fa-map-location-dot me-1"></i> Carte
+      </a>
+    </div>
+  </div>
+</nav>
+{% endblock catnav %}
+
+<!-- MOBILE NAV -->
+<div id="mobileNav" class="mobile-nav" role="dialog" aria-label="Menu mobile">
+  <div id="mobileNavOverlay" class="mobile-nav-overlay"></div>
+  <div class="mobile-nav-panel">
+    <div class="mobile-nav-header">
+      <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA" style="height:34px;width:auto;">
+      <button id="mobileNavClose" class="mobile-nav-close" aria-label="Fermer menu"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="mobile-nav-body">
+      <!-- Search mobile -->
+      <form action="{% url 'products:catalog' %}" method="get" style="margin-bottom:14px;">
+        <div style="display:flex;border:1.5px solid var(--border-md);border-radius:var(--r-8);overflow:hidden;">
+          <input type="text" name="q" placeholder="Rechercher..." style="flex:1;border:none;outline:none;padding:9px 14px;font-size:.875rem;background:transparent;font-family:var(--font);color:var(--text);">
+          <button type="submit" style="background:var(--green);color:#fff;border:none;padding:0 14px;cursor:pointer;"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+      </form>
+
+      {% if user.is_authenticated %}
+      <div class="mobile-nav-section">
+        <div style="padding:10px 12px;background:var(--surface-3);border-radius:var(--r-10);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+          <div><div style="font-weight:700;font-size:.875rem;">{{ user.get_full_name|default:user.username }}</div><div style="font-size:.7rem;color:var(--green);font-weight:600;">{{ user.get_role_display }}</div></div>
+        </div>
+        <a href="{% url 'dashboard:index' %}" class="mobile-nav-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="{% url 'orders:cart' %}"     class="mobile-nav-link"><i class="fa-solid fa-bag-shopping"></i> Mon Panier</a>
+        <a href="{% url 'orders:list' %}"     class="mobile-nav-link"><i class="fa-solid fa-box-open"></i> Mes Commandes</a>
+        <a href="{% url 'accounts:profile' %}" class="mobile-nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</a>
+        {% if user.is_vendor %}
+        <a href="{% url 'stores:my_store' %}" class="mobile-nav-link"><i class="fa-solid fa-store"></i> Ma Boutique</a>
+        <a href="{% url 'products:create' %}" class="mobile-nav-link"><i class="fa-solid fa-circle-plus"></i> Ajouter Produit</a>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="mobile-nav-section">
+        <a href="{% url 'accounts:login' %}"           class="mobile-nav-link"><i class="fa-solid fa-right-to-bracket"></i> Connexion</a>
+        <a href="{% url 'accounts:register_customer' %}" class="mobile-nav-link"><i class="fa-solid fa-user-plus"></i> S'inscrire acheteur</a>
+        <a href="{% url 'accounts:register_vendor' %}"   class="mobile-nav-link"><i class="fa-solid fa-store"></i> Ouvrir une boutique</a>
+      </div>
+      {% endif %}
+
+      <div class="mobile-nav-section">
+        <div class="mobile-nav-title">Navigation</div>
+        <a href="{% url 'home' %}"            class="mobile-nav-link"><i class="fa-solid fa-house"></i> Accueil</a>
+        <a href="{% url 'products:catalog' %}" class="mobile-nav-link"><i class="fa-solid fa-grid-2"></i> Catalogue</a>
+        <a href="{% url 'stores:list' %}"     class="mobile-nav-link"><i class="fa-solid fa-shop"></i> Boutiques</a>
+        <a href="{% url 'products:catalog' %}?sort=discount" class="mobile-nav-link" style="color:var(--orange);font-weight:600;"><i class="fa-solid fa-fire"></i> Meilleures offres</a>
+      </div>
+
+      <div class="mobile-nav-section">
+        <div class="mobile-nav-title">Catégories</div>
+        <a href="{% url 'products:catalog' %}?category=cosmetiques-beaute"  class="mobile-nav-link">💄 Cosmétiques & Beauté</a>
+        <a href="{% url 'products:catalog' %}?category=sante-pharmacie"     class="mobile-nav-link">💊 Santé & Pharmacie</a>
+        <a href="{% url 'products:catalog' %}?category=hygiene-soins"       class="mobile-nav-link">🧴 Hygiène & Soins</a>
+        <a href="{% url 'products:catalog' %}?category=animalerie"          class="mobile-nav-link">🐾 Animalerie</a>
+        <a href="{% url 'products:catalog' %}?category=mode-textile"        class="mobile-nav-link">👗 Mode & Textile</a>
+        <a href="{% url 'products:catalog' %}?category=bio-naturel"         class="mobile-nav-link">🌿 Bio & Naturel</a>
+        <a href="{% url 'products:catalog' %}?category=sport-bien-etre"     class="mobile-nav-link">🏋️ Sport</a>
+      </div>
+
+      {% if user.is_authenticated %}
+      <div style="padding-top:12px;border-top:1px solid var(--border);margin-top:8px;">
+        <a href="{% url 'accounts:logout' %}" class="mobile-nav-link" style="color:var(--danger);"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock full_header %}
+
+<!-- SIDEBAR OVERLAY (dashboard) -->
+<div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:996;backdrop-filter:blur(2px);"></div>
+
+{% block content %}{% endblock %}
+
+{% block footer %}
+<footer class="site-footer" role="contentinfo">
+  <div class="container-forsa">
+    <div class="row g-4">
+      <!-- Brand -->
+      <div class="col-lg-3 col-md-6">
+        <div class="footer-brand">
+          <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA فرصة" style="height:54px;width:auto;margin-bottom:12px;">
+          <p><strong style="color:var(--orange);">FORSA — فرصة</strong><br>La seconde chance des bons produits. Jusqu'à -70% sur des produits de qualité dans 14 catégories.</p>
+          <div class="footer-badges">
+            <span class="footer-badge"><i class="fa-solid fa-shield-halved txt-green"></i> Sécurisé</span>
+            <span class="footer-badge"><i class="fa-solid fa-truck txt-green"></i> 48 Wilayas</span>
+            <span class="footer-badge">🇩🇿 Algérie</span>
+          </div>
+          <div class="footer-social mt-3">
+            <a href="#" class="social-btn" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#" class="social-btn" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" class="social-btn" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+            <a href="#" class="social-btn" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Catégories -->
+      <div class="col-lg-2 col-6">
+        <div class="footer-heading">Catégories</div>
+        <a href="{% url 'products:catalog' %}?category=cosmetiques-beaute" class="footer-link">💄 Cosmétiques</a>
+        <a href="{% url 'products:catalog' %}?category=sante-pharmacie"    class="footer-link">💊 Santé</a>
+        <a href="{% url 'products:catalog' %}?category=mode-textile"       class="footer-link">👗 Mode</a>
+        <a href="{% url 'products:catalog' %}?category=sport-bien-etre"    class="footer-link">🏋️ Sport</a>
+      </div>
+
+      <!-- Marketplace -->
+      <div class="col-lg-2 col-6">
+        <div class="footer-heading">Marketplace</div>
+        <a href="{% url 'products:catalog' %}"                            class="footer-link"><i class="fa-solid fa-tag me-1"></i>Explorer les offres</a>
+        <a href="{% url 'products:categories' %}"                         class="footer-link"><i class="fa-solid fa-border-all me-1"></i>Catégories</a>
+        <a href="{% url 'products:catalog' %}?sort=discount"              class="footer-link"><i class="fa-solid fa-fire me-1" style="color:var(--orange);"></i>Meilleures offres</a>
+        <a href="{% url 'products:catalog' %}?urgency=urgent"             class="footer-link"><i class="fa-solid fa-clock me-1"></i>Date courte</a>
+        <a href="{% url 'stores:list' %}"                                  class="footer-link"><i class="fa-solid fa-shop me-1"></i>Nos boutiques</a>
+        <a href="{% url 'accounts:register_vendor' %}"                    class="footer-link"><i class="fa-solid fa-circle-plus me-1"></i>Ouvrir une boutique</a>
+      </div>
+
+      <!-- Aide -->
+      <div class="col-lg-2 col-6">
+        <div class="footer-heading">Aide & Support</div>
+        <a href="#" class="footer-link"><i class="fa-solid fa-circle-question me-1"></i>Centre d'aide</a>
+        <a href="#" class="footer-link"><i class="fa-solid fa-truck me-1"></i>Suivi commande</a>
+        <a href="#" class="footer-link"><i class="fa-solid fa-rotate-left me-1"></i>Politique de retour</a>
+        <a href="#" class="footer-link"><i class="fa-solid fa-credit-card me-1"></i>Modes de paiement</a>
+        <a href="#" class="footer-link"><i class="fa-solid fa-headset me-1"></i>Nous contacter</a>
+        <a href="#" class="footer-link"><i class="fa-solid fa-file-contract me-1"></i>CGU</a>
+      </div>
+
+      <!-- Newsletter -->
+      <div class="col-lg-3 col-md-6">
+        <div class="footer-heading">Newsletter FORSA</div>
+        <p style="font-size:.8rem;color:var(--text-lt);margin-bottom:12px;">Recevez les meilleures offres en avant-première, directement dans votre boîte mail.</p>
+        <div class="footer-newsletter">
+          <input type="email" placeholder="Votre adresse email..." aria-label="Email newsletter">
+          <button type="button"><i class="fa-solid fa-paper-plane"></i> OK</button>
+        </div>
+        <div class="footer-heading mt-3">Contact</div>
+        <p style="font-size:.8rem;color:var(--text-lt);line-height:2;">
+          <i class="fa-solid fa-location-dot me-2 txt-green"></i>Algérie — 48 wilayas<br>
+          <i class="fa-solid fa-envelope me-2 txt-green"></i>contact@forsa.dz<br>
+          <i class="fa-solid fa-phone me-2 txt-green"></i>+213 XX XX XX XX
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© 2025 <strong style="color:var(--green);">FORSA — فرصة</strong> · Tous droits réservés · Projet de fin d'études 🎓</div>
+      <div style="display:flex;gap:16px;">
+        <a href="#" style="color:var(--text-lt);">Confidentialité</a>
+        <a href="#" style="color:var(--text-lt);">CGU</a>
+        <a href="#" style="color:var(--text-lt);">Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+{% endblock footer %}
+
+<!-- BACK TO TOP -->
+<button id="backToTop" style="position:fixed;bottom:24px;right:24px;z-index:900;width:42px;height:42px;background:var(--green);color:#fff;border:none;border-radius:var(--r-10);cursor:pointer;box-shadow:var(--sh-md);opacity:0;transition:all .3s ease;display:flex;align-items:center;justify-content:center;font-size:.9rem;" aria-label="Retour en haut">
+  <i class="fa-solid fa-chevron-up"></i>
+</button>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% load static %}
+<script src="{% static 'js/forsa.js' %}"></script>
+{% block extra_js %}{% endblock %}
+
+<!-- ══ FORSA Notification Polling ══ -->
+<script>
+(function(){
+  const POLL_INTERVAL = 10000; // 10 seconds
+  const iconMap = {
+    order_placed:'fa-bag-shopping',order_confirmed:'fa-circle-check',
+    order_cancelled:'fa-circle-xmark',order_shipped:'fa-truck',
+    order_delivered:'fa-box-open',expiry_alert:'fa-triangle-exclamation',
+    system:'fa-circle-info'
+  };
+  const colorMap = {
+    order_placed:'var(--green)',order_confirmed:'var(--success)',
+    order_cancelled:'var(--danger)',order_shipped:'var(--info)',
+    order_delivered:'var(--success)',expiry_alert:'var(--warning)',
+    system:'var(--info)'
+  };
+
+  async function fetchNotifications(){
+    try {
+      const r = await fetch('{% url "notifications:api" %}', {
+        headers:{'X-Requested-With':'XMLHttpRequest'}
+      });
+      if(!r.ok) return;
+      const data = await r.json();
+
+      // Update badge
+      const badge = document.getElementById('notifBadge');
+      const bell  = document.getElementById('notifBell');
+      if(badge){
+        if(data.unread_count > 0){
+          badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+          badge.style.display = 'flex';
+          bell && bell.querySelector('i').classList.add('fa-shake');
+          setTimeout(()=> bell && bell.querySelector('i').classList.remove('fa-shake'), 1500);
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      // Render notification list
+      const list = document.getElementById('notifList');
+      if(!list) return;
+      if(!data.notifications || data.notifications.length === 0){
+        list.innerHTML = '<div class="nav-dropdown-item" style="color:var(--text-lt);font-size:.82rem;justify-content:center;padding:18px;"><i class="fa-solid fa-bell-slash me-2"></i>Aucune notification</div>';
+        return;
+      }
+      list.innerHTML = data.notifications.map(n => {
+        const icon  = iconMap[n.notif_type]  || 'fa-circle-info';
+        const color = colorMap[n.notif_type] || 'var(--info)';
+        const unreadStyle = n.is_read ? '' : 'background:var(--green-xl);border-left:3px solid var(--green);';
+        return `<a href="${n.link || '{% url "notifications:list" %}'}"
+                   onclick="markRead(${n.id})"
+                   class="nav-dropdown-item"
+                   style="align-items:flex-start;gap:10px;padding:11px 14px;${unreadStyle}flex-direction:column;">
+          <div style="display:flex;gap:9px;width:100%;">
+            <div style="width:30px;height:30px;border-radius:8px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fa-solid ${icon}" style="font-size:.8rem;color:${color};"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:.8rem;color:var(--text);margin-bottom:2px;">${escHtml(n.title)}</div>
+              ${n.body ? `<div style="font-size:.75rem;color:var(--text-lt);line-height:1.4;white-space:normal;">${escHtml(n.body)}</div>` : ''}
+            </div>
+            ${!n.is_read ? '<div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:4px;"></div>' : ''}
+          </div>
+          <div style="font-size:.68rem;color:var(--text-xl);padding-left:39px;">${n.created_at}</div>
+        </a>`;
+      }).join('');
+    } catch(e){ console.warn('Notification poll error:', e); }
+  }
+
+  function escHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  window.markRead = async function(id){
+    const csrf = document.cookie.match(/csrftoken=([\w-]+)/)?.[1]||'';
+    await fetch(`/notifications/${id}/read/`,{method:'POST',headers:{'X-CSRFToken':csrf}}).catch(()=>{});
+  };
+
+  window.markAllRead = async function(){
+    const csrf = document.cookie.match(/csrftoken=([\w-]+)/)?.[1]||'';
+    await fetch('/notifications/read-all/',{method:'POST',headers:{'X-CSRFToken':csrf}}).catch(()=>{});
+    document.getElementById('notifBadge') && (document.getElementById('notifBadge').style.display='none');
+    fetchNotifications();
+  };
+
+  window.markAllReadNav = window.markAllRead;
+
+  // Only poll when user is authenticated (check bell exists)
+  if(document.getElementById('notifBell')){
+    fetchNotifications();
+    setInterval(fetchNotifications, POLL_INTERVAL);
+  }
+})();
+</script>
+
+</body>
+</html>

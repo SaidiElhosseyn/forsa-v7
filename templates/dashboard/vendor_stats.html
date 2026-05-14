@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Statistiques — FORSA{% endblock %}
+{% block navbar %}{% endblock %}{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-chart-bar txt-green me-2"></i>Statistiques produits</h1>
+        <div class="breadcrumb">
+          <a href="{% url 'home' %}">Accueil</a><span>/</span>
+          <a href="{% url 'dashboard:vendor' %}">Dashboard</a><span>/</span>Statistiques
+        </div>
+      </div>
+      <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-house"></i> Accueil</a>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-box-open me-2 txt-green"></i>Performance des produits</h5>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Produit</th><th>Catégorie</th><th>Vues</th><th>Ventes</th>
+            <th>Stock</th><th>Prix actuel</th><th>Expire</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td>
+              <a href="{% url 'products:detail' p.slug %}" style="font-weight:600;color:var(--green);">
+                {{ p.name|truncatechars:30 }}
+              </a>
+            </td>
+            <td><span style="font-size:.85rem;">{{ p.category.icon }} {{ p.category.name|truncatechars:14 }}</span></td>
+            <td>{{ p.views_count }}</td>
+            <td><strong>{{ p.sales_count }}</strong></td>
+            <td>{{ p.quantity }} {{ p.unit }}</td>
+            <td style="font-weight:700;color:var(--green);">{{ p.current_price|floatformat:0 }} DA</td>
+            <td>
+              <span class="badge-expiry {{ p.expiry_urgency }}" style="position:static;display:inline-block;font-size:.72rem;">
+                {{ p.days_until_expiry }}j
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="table-empty">Aucun produit.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Annuler la commande — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main" style="display:flex;align-items:center;justify-content:center;">
+    <div style="max-width:480px;width:100%;">
+      <div class="card card-body text-center">
+        <div style="font-size:3.5rem;margin-bottom:14px;">⚠️</div>
+        <h3 style="font-weight:900;margin-bottom:8px;">Annuler cette commande ?</h3>
+        <p style="color:var(--text-lt);margin-bottom:16px;">Commande <strong style="color:var(--green);">#{{ order.order_number }}</strong> · <strong>{{ order.total_amount|floatformat:0 }} DA</strong></p>
+        {% with pay=order.payment %}
+        {% if pay and pay.method == 'virtual_card' %}
+        <div class="alert alert-success" style="margin-bottom:16px;"><i class="fa-solid fa-rotate-left"></i><div><strong>{{ order.total_amount|floatformat:0 }} DA</strong> seront remboursés sur votre carte virtuelle.</div></div>
+        {% else %}
+        <div class="alert alert-info" style="margin-bottom:16px;"><i class="fa-solid fa-circle-info"></i><div>Paiement COD — aucun remboursement nécessaire.</div></div>
+        {% endif %}
+        {% endwith %}
+        <form method="post" style="display:flex;gap:10px;justify-content:center;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-md"><i class="fa-solid fa-xmark"></i> Confirmer l'annulation</button>
+          <a href="{% url 'orders:detail' order.order_number %}" class="btn btn-ghost btn-md">Garder la commande</a>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}Mon Panier — FORSA{% endblock %}
+{% block content %}
+<div class="container-forsa" style="padding-top:22px;padding-bottom:48px;">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Accueil</a>
+    <h1 style="font-size:1.5rem;font-weight:900;margin:0;letter-spacing:-.03em;">
+      <i class="fa-solid fa-bag-shopping txt-green me-2"></i>Mon Panier
+      {% if items.count > 0 %}
+        <span style="background:var(--orange);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;margin-left:4px;">{{ items.count }}</span>
+      {% endif %}
+    </h1>
+  </div>
+
+  {% if items %}
+  <div class="row g-4">
+    <!-- Articles -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;font-size:.88rem;color:var(--text-md);">{{ items.count }} article{{ items.count|pluralize }}</span>
+          <a href="{% url 'products:catalog' %}" style="font-size:.82rem;color:var(--green);font-weight:600;">
+            <i class="fa-solid fa-plus me-1"></i>Continuer mes achats
+          </a>
+        </div>
+
+        {% for item in items %}
+        <div id="cart-row-{{ item.id }}" style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:flex-start;">
+          <!-- Image -->
+          <div style="width:82px;height:82px;border-radius:var(--r-10);overflow:hidden;flex-shrink:0;background:var(--surface-2);">
+            {% if item.product.images.first %}
+              <img src="{{ item.product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;" alt="{{ item.product.name }}">
+            {% else %}
+              <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;">{{ item.product.category.icon|default:"📦" }}</div>
+            {% endif %}
+          </div>
+          <!-- Infos -->
+          <div style="flex:1;min-width:0;">
+            <a href="{% url 'products:detail' item.product.slug %}" style="font-weight:700;color:var(--text);font-size:.9rem;display:block;margin-bottom:4px;">{{ item.product.name }}</a>
+            <div style="font-size:.78rem;color:var(--text-lt);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span><i class="fa-solid fa-shop me-1 txt-green"></i>{{ item.product.store.name }}</span>
+              <span class="badge-expiry {{ item.product.expiry_urgency }}" style="position:static;display:inline-block;font-size:.68rem;">{{ item.product.days_until_expiry }}j</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+              <span style="font-weight:800;color:var(--green);font-size:.95rem;">{{ item.product.current_price|floatformat:0 }} DA</span>
+              {% if item.product.discount_pct > 0 %}
+                <span style="font-size:.75rem;text-decoration:line-through;color:var(--text-xl);">{{ item.product.original_price|floatformat:0 }} DA</span>
+                <span class="badge badge-red">-{{ item.product.discount_pct|floatformat:0 }}%</span>
+              {% endif %}
+            </div>
+            <!-- Quantité — FIX: bouton − désactivé quand qty=1 -->
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="display:flex;align-items:center;background:var(--surface-3);border-radius:var(--r-full);overflow:hidden;border:1.5px solid var(--border-md);">
+                <button
+                  onclick="changeQty({{ item.id }}, {{ item.quantity }}, -1)"
+                  {% if item.quantity <= 1 %}disabled{% endif %}
+                  style="width:34px;height:34px;border:none;background:transparent;cursor:{% if item.quantity <= 1 %}not-allowed{% else %}pointer{% endif %};font-size:1.1rem;color:{% if item.quantity <= 1 %}var(--text-xl){% else %}var(--text-md){% endif %};display:flex;align-items:center;justify-content:center;"
+                  aria-label="Diminuer">−</button>
+                <span id="qty-{{ item.id }}" style="min-width:32px;text-align:center;font-weight:700;font-size:.9rem;">{{ item.quantity }}</span>
+                <button
+                  onclick="changeQty({{ item.id }}, {{ item.quantity }}, +1)"
+                  {% if item.quantity >= item.product.quantity %}disabled{% endif %}
+                  style="width:34px;height:34px;border:none;background:transparent;cursor:{% if item.quantity >= item.product.quantity %}not-allowed{% else %}pointer{% endif %};font-size:1.1rem;color:{% if item.quantity >= item.product.quantity %}var(--text-xl){% else %}var(--text-md){% endif %};display:flex;align-items:center;justify-content:center;"
+                  aria-label="Augmenter">+</button>
+              </div>
+              <span style="font-size:.72rem;color:var(--text-lt);">Dispo. : {{ item.product.quantity }}</span>
+            </div>
+          </div>
+          <!-- Sous-total + Retirer -->
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+            <span id="subtotal-{{ item.id }}" style="font-weight:900;font-size:1.05rem;color:var(--text);">{{ item.subtotal|floatformat:0 }} DA</span>
+            <!-- Retirer = suppression explicite -->
+            <a href="{% url 'orders:cart_remove' item.id %}" style="font-size:.78rem;color:var(--danger);display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Retirer du panier">
+              <i class="fa-solid fa-trash-can"></i> Retirer
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div style="padding:10px 18px;background:var(--surface-2);font-size:.8rem;color:var(--text-lt);">
+          <i class="fa-solid fa-circle-info me-2 txt-green"></i>Les prix peuvent varier selon la réduction automatique journalière FORSA.
+        </div>
+      </div>
+    </div>
+
+    <!-- Récapitulatif -->
+    <div class="col-lg-4">
+      <div class="card card-body" style="position:sticky;top:88px;">
+        <h5 style="font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+          <i class="fa-solid fa-receipt me-2 txt-green"></i>Récapitulatif
+        </h5>
+        {% for item in items %}
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px;">
+          <span style="color:var(--text-md);">{{ item.product.name|truncatechars:22 }} ×<span id="qty-recap-{{ item.id }}">{{ item.quantity }}</span></span>
+          <span style="font-weight:600;" id="subtotal-recap-{{ item.id }}">{{ item.subtotal|floatformat:0 }} DA</span>
+        </div>
+        {% endfor %}
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;">Total</span>
+          <span id="cart-total" style="font-size:1.3rem;font-weight:900;color:var(--green);">{{ cart.total|floatformat:0 }} DA</span>
+        </div>
+        <a href="{% url 'orders:checkout' %}" class="btn btn-primary btn-lg btn-full" style="justify-content:center;margin-bottom:8px;">
+          <i class="fa-solid fa-lock"></i> Commander maintenant
+        </a>
+        <a href="{% url 'products:catalog' %}" class="btn btn-ghost btn-md btn-full" style="justify-content:center;">
+          <i class="fa-solid fa-grid-2"></i> Continuer mes achats
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Panier vide -->
+  <div style="text-align:center;padding:72px 24px;background:var(--surface);border-radius:var(--r-16);border:1px solid var(--border);max-width:500px;margin:0 auto;">
+    <i class="fa-solid fa-bag-shopping" style="font-size:4rem;color:var(--text-xl);display:block;margin-bottom:16px;"></i>
+    <h3 style="font-weight:800;margin-bottom:8px;">Votre panier est vide</h3>
+    <p style="color:var(--text-lt);margin-bottom:22px;">Découvrez nos offres et ajoutez des produits à prix réduits.</p>
+    <a href="{% url 'products:catalog' %}" class="btn btn-primary btn-md">
+      <i class="fa-solid fa-grid-2"></i> Explorer les offres
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// FIX: Utilise les données server pour calculer subtotal
+// changeQty appelle cart_update avec la nouvelle quantité
+async function changeQty(itemId, currentQty, delta) {
+  const newQty = currentQty + delta;
+  if (newQty < 1) return; // Protection côté client
+
+  const csrf = document.cookie.match(/csrftoken=([\w-]+)/)?.[1] || '';
+  try {
+    const res  = await fetch(`/orders/cart/update/${itemId}/`, {
+      method:  'POST',
+      headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+      body:    `quantity=${newQty}`,
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.error || 'Erreur', 'error');
+      return;
+    }
+    // Update qty displays
+    document.querySelectorAll(`#qty-${itemId}, #qty-recap-${itemId}`)
+      .forEach(el => el && (el.textContent = newQty));
+    // Update subtotals
+    const sub = Math.round(data.subtotal).toLocaleString('fr-DZ') + ' DA';
+    document.querySelectorAll(`#subtotal-${itemId}, #subtotal-recap-${itemId}`)
+      .forEach(el => el && (el.textContent = sub));
+    // Update total
+    const totalEl = document.getElementById('cart-total');
+    if (totalEl) totalEl.textContent = Math.round(data.cart_total).toLocaleString('fr-DZ') + ' DA';
+    // Update navbar badge
+    document.querySelectorAll('.cart-count')
+      .forEach(el => el && (el.textContent = data.cart_count));
+    // Toggle − button disabled state
+    const minusBtn = document.querySelector(`#cart-row-${itemId} button[aria-label="Diminuer"]`);
+    if (minusBtn) {
+      minusBtn.disabled = newQty <= 1;
+      minusBtn.style.cursor   = newQty <= 1 ? 'not-allowed' : 'pointer';
+      minusBtn.style.color    = newQty <= 1 ? 'var(--text-xl)' : 'var(--text-md)';
+    }
+    // Update onclick for next click
+    const minusB = document.querySelector(`#cart-row-${itemId} button[aria-label="Diminuer"]`);
+    const plusB  = document.querySelector(`#cart-row-${itemId} button[aria-label="Augmenter"]`);
+    if (minusB) minusB.setAttribute('onclick', `changeQty(${itemId}, ${newQty}, -1)`);
+    if (plusB)  plusB.setAttribute('onclick',  `changeQty(${itemId}, ${newQty}, +1)`);
+  } catch(e) {
+    showToast('Erreur réseau.', 'error');
+  }
+}
+</script>
+{% endblock %}

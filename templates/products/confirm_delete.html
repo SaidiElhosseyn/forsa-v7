@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer — {{ product.name }}{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main" style="display:flex;align-items:center;justify-content:center;">
+    <div style="max-width:480px;width:100%;">
+      <div class="card card-body text-center">
+        <div style="font-size:3.5rem;margin-bottom:14px;">🗑️</div>
+        <h3 style="font-weight:900;margin-bottom:8px;">Supprimer ce produit ?</h3>
+        <p style="color:var(--text-lt);margin-bottom:16px;">Vous allez supprimer <strong>{{ product.name }}</strong>.<br>Cette action est <strong>irréversible</strong>.</p>
+        <div style="background:var(--surface-2);border-radius:var(--r-10);padding:12px;margin-bottom:20px;text-align:left;font-size:.85rem;color:var(--text-md);">
+          <div><i class="fa-solid fa-box-open me-2 txt-green"></i><strong>{{ product.name }}</strong></div>
+          <div><i class="fa-solid fa-money-bill me-2 txt-green"></i>{{ product.current_price|floatformat:0 }} DA</div>
+          <div><i class="fa-solid fa-calendar me-2 txt-green"></i>{{ product.expiry_date|date:"d/m/Y" }}</div>
+        </div>
+        <form method="post" style="display:flex;gap:10px;justify-content:center;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-md"><i class="fa-solid fa-trash"></i> Confirmer la suppression</button>
+          <a href="{% url 'stores:my_store' %}" class="btn btn-ghost btn-md">Annuler</a>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ active_category.name|default:"Explorer les offres" }} — FORSA{% endblock %}
+
+{% block catnav %}{% endblock %}
+
+{% block content %}
+
+<!-- ═══ OFFERS HEADER ═══ -->
+<div class="offers-header">
+  <div class="container-forsa">
+    <h1><i class="fa-solid fa-tag txt-green me-2"></i>Explorer les offres</h1>
+    <p>Trouvez des produits près de chez vous à prix réduits</p>
+    <form method="get" action="{% url 'products:catalog' %}" class="offers-search" id="searchForm">
+      {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+      {% if urgency  %}<input type="hidden" name="urgency"  value="{{ urgency }}">{% endif %}
+      {% if sort and sort != 'expiry' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      <input type="text" name="q" value="{{ q }}" placeholder="Rechercher un produit, une marque, une boutique..." autocomplete="off" aria-label="Recherche">
+      {% if q %}<a href="{% url 'products:catalog' %}{% if category %}?category={{ category }}{% endif %}" style="display:flex;align-items:center;padding:0 10px;color:var(--text-lt);" title="Effacer"><i class="fa-solid fa-xmark"></i></a>{% endif %}
+      <button type="submit"><i class="fa-solid fa-magnifying-glass"></i> Rechercher</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ HORIZONTAL FILTER BAR ═══ -->
+<div class="filter-bar">
+  <div class="container-forsa">
+    <div class="filter-bar-inner">
+      <!-- Category chips -->
+      <a href="{% url 'products:catalog' %}{% if q %}?q={{ q }}{% endif %}" class="filter-chip {% if not category %}active{% endif %}">
+        <i class="fa-solid fa-border-all"></i> Toutes catégories
+      </a>
+      {% for cat in categories %}
+      <a href="{% url 'products:catalog' %}?category={{ cat.slug }}{% if q %}&q={{ q }}{% endif %}" class="filter-chip {% if category == cat.slug %}active{% endif %}">
+        {{ cat.icon }} {{ cat.name|truncatechars:14 }}
+      </a>
+      {% endfor %}
+
+      <!-- Urgency filter -->
+      <a href="{% url 'products:catalog' %}{% if category %}?category={{ category }}&{% else %}?{% endif %}urgency=urgent{% if q %}&q={{ q }}{% endif %}" class="filter-chip {% if urgency == 'urgent' %}active{% endif %}" style="color:{% if urgency == 'urgent' %}var(--green){% else %}var(--danger){% endif %};">
+        <i class="fa-solid fa-fire"></i> ≤3 jours
+      </a>
+
+      <!-- Sort -->
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+        <form method="get" action="{% url 'products:catalog' %}" style="display:flex;align-items:center;gap:6px;">
+          {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+          {% if urgency  %}<input type="hidden" name="urgency"  value="{{ urgency }}">{% endif %}
+          {% if q        %}<input type="hidden" name="q"        value="{{ q }}">{% endif %}
+          <label style="font-size:.78rem;color:var(--text-lt);font-weight:600;white-space:nowrap;"><i class="fa-solid fa-arrow-up-a-z me-1"></i>Trier par</label>
+          <select name="sort" class="filter-chip filter-chip-sort" onchange="this.form.submit()" style="border-radius:var(--r-full);cursor:pointer;padding:6px 12px;font-size:.78rem;">
+            <option value="expiry"     {% if sort == 'expiry'     %}selected{% endif %}>Date péremption</option>
+            <option value="discount"   {% if sort == 'discount'   %}selected{% endif %}>% Réduction</option>
+            <option value="price_asc"  {% if sort == 'price_asc'  %}selected{% endif %}>Prix croissant</option>
+            <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Prix décroissant</option>
+            <option value="newest"     {% if sort == 'newest'     %}selected{% endif %}>Nouveautés</option>
+          </select>
+        </form>
+      </div>
+    </div>
+
+    <!-- Active filter chips -->
+    {% if q or category or urgency %}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+      {% if q %}<span style="background:var(--green-xl);color:var(--green);border-radius:99px;padding:3px 11px;font-size:.73rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fa-solid fa-magnifying-glass"></i>"{{ q }}"</span>{% endif %}
+      {% if active_category %}<span style="background:var(--green-xl);color:var(--green);border-radius:99px;padding:3px 11px;font-size:.73rem;font-weight:700;">{{ active_category.icon }} {{ active_category.name }}</span>{% endif %}
+      {% if urgency == 'urgent' %}<span style="background:#FEE2E2;color:var(--danger);border-radius:99px;padding:3px 11px;font-size:.73rem;font-weight:700;">🔴 Expire ≤3j</span>{% endif %}
+      <a href="{% url 'products:catalog' %}" style="background:var(--surface-3);color:var(--text-lt);border-radius:99px;padding:3px 11px;font-size:.73rem;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-xmark"></i> Effacer</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container-forsa" style="padding-top:24px;padding-bottom:52px;">
+
+  <!-- Results count -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:.875rem;color:var(--text-lt);">
+      <strong style="color:var(--text);">{{ total }}</strong> offre{{ total|pluralize }} disponible{{ total|pluralize }}
+      {% if active_category %} dans <strong style="color:var(--green);">{{ active_category.name }}</strong>{% endif %}
+    </div>
+    <a href="{% url 'products:categories' %}" style="font-size:.8rem;color:var(--green);font-weight:600;text-decoration:none;display:flex;align-items:center;gap:5px;">
+      <i class="fa-solid fa-border-all"></i> Voir par catégories
+    </a>
+  </div>
+
+  {% if page_obj.object_list %}
+  <!-- ═══ SECTION: Offres près de vous ═══ -->
+  {% if not category and not q and not urgency %}
+  <div style="margin-bottom:8px;">
+    <h2 style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <i class="fa-solid fa-location-dot txt-green"></i> Offres près de vous
+      <span style="font-size:.72rem;font-weight:500;color:var(--text-lt);">Produits à prix réduits disponibles maintenant</span>
+    </h2>
+  </div>
+  {% endif %}
+
+  <div class="row g-3">
+    {% for p in page_obj %}
+    <div class="col-6 col-xl-4 col-xxl-3">
+      <div class="product-card">
+        <div class="product-img">
+          {% if p.images.first %}
+            <img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+          {% else %}
+            <div class="product-img-placeholder">{{ p.category.icon|default:"📦" }}</div>
+          {% endif %}
+
+          <!-- Date courte badge (prominent) -->
+          {% if p.days_until_expiry <= 30 %}
+          <span class="badge-date-courte">Date courte</span>
+          {% endif %}
+
+          <!-- Discount badge -->
+          {% if p.discount_pct > 0 %}
+          <span class="badge-discount" style="top:10px;right:10px;">-{{ p.discount_pct|floatformat:0 }}%</span>
+          {% endif %}
+
+          <!-- Wishlist -->
+          {% if user.is_customer %}
+          <button class="product-wishlist" onclick="toggleWishlist(this,'{{ p.pk }}')" aria-label="Favoris">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+          {% endif %}
+        </div>
+        <div class="product-body">
+          <!-- Brand / store -->
+          <a href="{% url 'stores:detail' p.store.slug %}" class="product-vendor">
+            <i class="fa-solid fa-shop"></i> {{ p.store.name }}
+          </a>
+          <!-- Product name -->
+          <a href="{% url 'products:detail' p.slug %}" class="product-name" style="color:inherit;">{{ p.name }}</a>
+          <!-- Prices -->
+          <div class="product-prices">
+            <span class="price-now">{{ p.current_price|floatformat:3 }} DA</span>
+            {% if p.discount_pct > 0 %}<span class="price-old">{{ p.original_price|floatformat:0 }}</span>{% endif %}
+          </div>
+          <!-- Expiry info -->
+          <div style="font-size:.72rem;color:var(--text-lt);margin-bottom:8px;display:flex;align-items:center;gap:4px;">
+            <i class="fa-regular fa-clock"></i>
+            Expire le {{ p.expiry_date|date:"d/m/Y" }}
+          </div>
+          <!-- Meta: store + distance -->
+          <div class="product-meta">
+            <span><i class="fa-solid fa-location-dot me-1"></i>{{ p.store.wilaya }}</span>
+            <span>{{ p.quantity }} {{ p.unit }}</span>
+          </div>
+          <!-- Actions -->
+          <div class="product-footer">
+            <div class="product-actions">
+              <a href="{% url 'products:detail' p.slug %}" class="btn btn-primary btn-sm flex-grow-1" style="justify-content:center;">
+                <i class="fa-solid fa-eye"></i> Voir l'offre
+              </a>
+              {% if user.is_authenticated and user.is_customer %}
+              <button onclick="addToCart('{{ p.slug }}',this)" class="btn btn-ghost btn-sm btn-icon" title="Ajouter au panier">
+                <i class="fa-solid fa-bag-shopping"></i>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex;justify-content:center;gap:6px;margin-top:32px;flex-wrap:wrap;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ category }}&urgency={{ urgency }}&sort={{ sort }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-chevron-left"></i></a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+      <span class="btn btn-primary btn-sm">{{ num }}</span>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?page={{ num }}&q={{ q }}&category={{ category }}&urgency={{ urgency }}&sort={{ sort }}" class="btn btn-ghost btn-sm">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ category }}&urgency={{ urgency }}&sort={{ sort }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-chevron-right"></i></a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      {% if active_category %}
+        <span style="font-size:3rem;">{{ active_category.icon }}</span>
+      {% elif q %}
+        <i class="fa-solid fa-magnifying-glass" style="font-size:2.2rem;color:var(--green);"></i>
+      {% else %}
+        <i class="fa-solid fa-box-open" style="font-size:2.2rem;color:var(--green);"></i>
+      {% endif %}
+    </div>
+    <h4 class="empty-state-title">
+      {% if active_category %}Aucun produit dans « {{ active_category.name }} »
+      {% elif q %}Aucun résultat pour « {{ q }} »
+      {% else %}Aucun produit disponible pour l'instant{% endif %}
+    </h4>
+    <p class="empty-state-sub">
+      {% if active_category %}Aucun vendeur n'a encore ajouté de produit dans cette catégorie.
+      {% elif q %}Essayez d'autres mots-clés ou parcourez toutes les offres.
+      {% else %}Les offres FORSA apparaîtront ici dès que les vendeurs en publient.{% endif %}
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a href="{% url 'products:catalog' %}" class="btn btn-primary btn-md">
+        <i class="fa-solid fa-rotate"></i> Voir toutes les offres
+      </a>
+      <a href="{% url 'products:categories' %}" class="btn btn-outline btn-md">
+        <i class="fa-solid fa-border-all"></i> Parcourir les catégories
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

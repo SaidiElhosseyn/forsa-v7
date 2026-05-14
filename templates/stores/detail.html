@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ store.name }} — FORSA{% endblock %}
+{% block content %}
+<div style="height:200px;background:linear-gradient(135deg,var(--green-dk),var(--green));position:relative;overflow:hidden;">
+  {% if store.banner %}<img src="{{ store.banner.url }}" style="width:100%;height:100%;object-fit:cover;opacity:.55;position:absolute;inset:0;">{% endif %}
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.4),transparent);"></div>
+</div>
+<div class="container-forsa" style="padding-bottom:48px;">
+  <div style="background:var(--surface);border-radius:0 0 var(--r-16) var(--r-16);padding:18px 22px;margin-bottom:24px;box-shadow:var(--sh-sm);border:1px solid var(--border);border-top:none;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-top:-50px;position:relative;">
+    {% if store.logo %}<img src="{{ store.logo.url }}" style="width:76px;height:76px;border-radius:14px;border:3px solid var(--surface);object-fit:cover;box-shadow:var(--sh-md);flex-shrink:0;">
+    {% else %}<div style="width:76px;height:76px;border-radius:14px;border:3px solid var(--surface);background:var(--green);display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:var(--sh-md);flex-shrink:0;">🏪</div>{% endif %}
+    <div style="flex:1;">
+      <h1 style="font-size:1.5rem;font-weight:900;margin:0 0 4px;letter-spacing:-.03em;">{{ store.name }}</h1>
+      <div style="font-size:.82rem;color:var(--text-lt);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        {% if store.wilaya %}<span><i class="fa-solid fa-location-dot me-1 txt-green"></i>Wilaya {{ store.wilaya }}</span>{% endif %}
+        <span><i class="fa-solid fa-star me-1" style="color:var(--gold);"></i>{{ store.rating|floatformat:1 }}</span>
+        <span><i class="fa-solid fa-bag-shopping me-1 txt-green"></i>{{ store.total_sales }} vente{{ store.total_sales|pluralize }}</span>
+        <span><i class="fa-solid fa-box-open me-1 txt-green"></i>{{ products.count }} produit{{ products.count|pluralize }}</span>
+        <span class="badge {% if store.status == 'active' %}badge-green{% else %}badge-gray{% endif %}">{{ store.get_status_display }}</span>
+      </div>
+      {% if store.description %}<p style="font-size:.85rem;color:var(--text-md);margin-top:8px;max-width:600px;">{{ store.description }}</p>{% endif %}
+    </div>
+    {% if store.phone %}<a href="tel:{{ store.phone }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-phone"></i> {{ store.phone }}</a>{% endif %}
+  </div>
+  <div class="section-header">
+    <div><h3 class="section-title">Produits disponibles</h3><div class="section-sub">{{ products.count }} offre{{ products.count|pluralize }}</div></div>
+  </div>
+  <div class="row g-3">
+    {% for p in products %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="product-card">
+        <div class="product-img">
+          {% if p.images.first %}<img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+          {% else %}<div class="product-img-placeholder">{{ p.category.icon|default:"📦" }}</div>{% endif %}
+          {% if p.discount_pct > 0 %}<span class="badge-discount">-{{ p.discount_pct|floatformat:0 }}%</span>{% endif %}
+          <span class="badge-expiry {{ p.expiry_urgency }}">{{ p.days_until_expiry }}j</span>
+        </div>
+        <div class="product-body">
+          <a href="{% url 'products:detail' p.slug %}" class="product-name" style="color:inherit;">{{ p.name }}</a>
+          <div class="product-prices"><span class="price-now">{{ p.current_price|floatformat:0 }} DA</span>{% if p.discount_pct > 0 %}<span class="price-old">{{ p.original_price|floatformat:0 }}</span>{% endif %}</div>
+          <a href="{% url 'products:detail' p.slug %}" class="btn btn-primary btn-sm btn-full mt-1" style="justify-content:center;">Voir l'offre</a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center" style="padding:48px;color:var(--text-lt);">
+      <i class="fa-solid fa-box-open" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>Aucun produit disponible pour le moment.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

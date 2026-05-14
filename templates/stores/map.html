@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Carte des boutiques — FORSA{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+#forsa-map{height:calc(100vh - 160px);min-height:560px;border-radius:0 0 var(--r-16) var(--r-16);}
+.leaflet-popup-content-wrapper{border-radius:var(--r-12);box-shadow:var(--sh-lg);border:1px solid var(--border);padding:0;}
+.leaflet-popup-content{margin:0;min-width:220px;}
+.map-popup{padding:0;}
+.map-popup .pop-header{background:var(--green);color:#fff;padding:10px 14px;border-radius:var(--r-12) var(--r-12) 0 0;}
+.map-popup .pop-name{font-size:.95rem;font-weight:800;margin-bottom:2px;}
+.map-popup .pop-wilaya{font-size:.75rem;opacity:.75;}
+.map-popup .pop-body{padding:12px 14px;}
+.map-popup .pop-product{display:flex;align-items:center;gap:8px;background:var(--surface-2);border-radius:var(--r-8);padding:8px 10px;margin-bottom:10px;}
+.map-popup .pop-pname{font-size:.82rem;font-weight:600;color:var(--text);}
+.map-popup .pop-price{font-size:.95rem;font-weight:900;color:var(--green);}
+.map-popup .pop-old{font-size:.75rem;color:var(--text-lt);text-decoration:line-through;margin-right:4px;}
+.map-popup .pop-disc{background:var(--danger);color:#fff;padding:2px 7px;border-radius:4px;font-size:.7rem;font-weight:800;}
+.map-popup .pop-expiry{font-size:.75rem;color:var(--text-lt);margin-bottom:8px;}
+.map-popup .pop-btn{display:block;text-align:center;background:var(--green);color:#fff;border-radius:var(--r-8);padding:7px;font-size:.82rem;font-weight:700;text-decoration:none;}
+.map-popup .pop-btn:hover{background:var(--green-dk);}
+.map-sidebar{width:320px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.map-store-card{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.map-store-card:hover{background:var(--green-xl);}
+.map-store-card.active{background:var(--green-xl);border-left:3px solid var(--green);}
+.map-store-name{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+.map-store-meta{font-size:.75rem;color:var(--text-lt);}
+.map-dist{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--green-xl);color:var(--green);display:inline-block;margin-left:6px;}
+/* Marker custom */
+.forsa-marker{
+  width:34px;height:34px;border-radius:50%;background:var(--green);
+  border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.25);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  cursor:pointer;transition:transform .15s;
+}
+.forsa-marker:hover{transform:scale(1.15);}
+.forsa-marker.urgent{background:var(--danger);}
+.forsa-marker.warning{background:var(--warning);}
+.locate-btn{
+  position:absolute;top:14px;right:14px;z-index:1000;
+  background:var(--wh);border:1px solid var(--border-md);
+  border-radius:var(--r-8);padding:8px 14px;
+  font-size:.82rem;font-weight:600;cursor:pointer;
+  box-shadow:var(--sh-sm);color:var(--green);
+  display:flex;align-items:center;gap:6px;
+}
+.locate-btn:hover{background:var(--green);color:#fff;}
+@media(max-width:767px){.map-sidebar{width:100%;max-height:220px;order:2;}.forsa-map-layout{flex-direction:column;}.map-main{order:1;}#forsa-map{height:calc(100vh - 380px);min-height:320px;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div style="background:linear-gradient(130deg,#0D4020,var(--green));padding:22px 0 20px;">
+  <div class="container-forsa">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1 style="color:#fff;font-weight:900;font-size:1.6rem;margin-bottom:4px;">
+          <i class="fa-solid fa-map-location-dot me-2"></i>Carte des boutiques FORSA
+        </h1>
+        <p style="color:rgba(255,255,255,.65);font-size:.875rem;">
+          {{ stores|length }} boutique{{ stores|length|pluralize }} active{{ stores|length|pluralize }} en Algérie
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="background:rgba(255,255,255,.12);border-radius:var(--r-6);padding:5px 12px;font-size:.78rem;color:#fff;">
+          <i class="fa-solid fa-circle" style="color:var(--success);font-size:.5rem;margin-right:5px;"></i>Boutique active
+        </div>
+        <div style="background:rgba(255,255,255,.12);border-radius:var(--r-6);padding:5px 12px;font-size:.78rem;color:#fff;">
+          <i class="fa-solid fa-circle" style="color:var(--danger);font-size:.5rem;margin-right:5px;"></i>Expire bientôt
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Map layout -->
+<div class="forsa-map-layout" style="display:flex;height:calc(100vh - 160px);max-height:700px;">
+
+  <!-- Sidebar -->
+  <div class="map-sidebar">
+    <div style="padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface-2);flex-shrink:0;">
+      <input type="text" id="mapSearch" placeholder="🔍 Rechercher une boutique..."
+             style="width:100%;border:1.5px solid var(--border-md);border-radius:var(--r-8);padding:8px 12px;font-size:.84rem;font-family:var(--font);outline:none;background:var(--surface);"
+             oninput="filterMapStores(this.value)">
+    </div>
+    <div id="storeList" style="flex:1;overflow-y:auto;"></div>
+    <div style="padding:12px;border-top:1px solid var(--border);flex-shrink:0;">
+      <a href="{% url 'stores:list' %}" class="btn btn-ghost btn-sm btn-full" style="justify-content:center;">
+        <i class="fa-solid fa-shop me-1"></i>Voir toutes les boutiques
+      </a>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-main" style="flex:1;position:relative;">
+    <button class="locate-btn" onclick="locateUser()" title="Me localiser">
+      <i class="fa-solid fa-location-crosshairs"></i> Me localiser
+    </button>
+    <div id="forsa-map"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Init map ──────────────────────────────────────────────────
+const map = L.map('forsa-map', {
+  center: [28.0, 2.7],
+  zoom:   5,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+  maxZoom: 18,
+}).addTo(map);
+
+// ── State ─────────────────────────────────────────────────────
+let userMarker = null;
+let allFeatures = [];
+let activeMarkerId = null;
+
+// ── Fetch GeoJSON data ────────────────────────────────────────
+async function loadStores() {
+  try {
+    const res  = await fetch('{% url "stores:map" %}?format=json');
+    const data = await res.json();
+    allFeatures = data.features || [];
+    renderSidebar(allFeatures);
+    renderMarkers(allFeatures);
+  } catch(e) {
+    console.warn('Erreur chargement boutiques:', e);
+    document.getElementById('storeList').innerHTML =
+      '<div style="padding:20px;text-align:center;color:var(--text-lt);font-size:.85rem;"><i class="fa-solid fa-wifi-slash" style="display:block;font-size:2rem;margin-bottom:8px;"></i>Impossible de charger les boutiques.</div>';
+  }
+}
+
+// ── Custom marker icon ────────────────────────────────────────
+function makeMarkerIcon(hasUrgent) {
+  const color = hasUrgent ? '#DC2626' : '#1A6B2F';
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:${color};border:3px solid #fff;
+                box-shadow:0 3px 10px rgba(0,0,0,.28);display:flex;align-items:center;
+                justify-content:center;font-size:14px;cursor:pointer;transition:transform .15s;">🏪</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -20],
+  });
+}
+
+function makeUserIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:18px;height:18px;border-radius:50%;background:#0369A1;border:3px solid #fff;
+                box-shadow:0 0 0 6px rgba(3,105,161,.2);"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
+// ── Render map markers ────────────────────────────────────────
+const markers = {};
+
+function renderMarkers(features) {
+  // Remove old
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  Object.keys(markers).forEach(k => delete markers[k]);
+
+  features.forEach(f => {
+    const p   = f.properties;
+    const lat = f.geometry.coordinates[1];
+    const lng = f.geometry.coordinates[0];
+    const bp  = p.best_product;
+    const hasUrgent = bp && daysBetween(bp.expiry_date) <= 3;
+
+    const marker = L.marker([lat, lng], { icon: makeMarkerIcon(hasUrgent) });
+
+    // Build popup content
+    const popupHtml = `
+      <div class="map-popup">
+        <div class="pop-header">
+          <div class="pop-name">🏪 ${escHtml(p.name)}</div>
+          <div class="pop-wilaya">Wilaya ${p.wilaya || '—'} · ${p.product_count} produit${p.product_count !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="pop-body">
+          ${bp ? `
+          <div class="pop-product">
+            <span style="font-size:1.5rem;">${bp.icon || '📦'}</span>
+            <div style="flex:1;">
+              <div class="pop-pname">${escHtml(bp.name)}</div>
+              <div class="pop-expiry"><i class="fa-solid fa-clock" style="margin-right:3px;color:var(--warning);"></i>Expire ${formatDate(bp.expiry_date)} (${daysBetween(bp.expiry_date)}j)</div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                ${parseFloat(bp.discount_pct) > 0 ? `<span class="pop-old">${parseFloat(bp.original_price||0).toFixed(0)} DA</span>` : ''}
+                <span class="pop-price">${parseFloat(bp.price).toFixed(0)} DA</span>
+                ${parseFloat(bp.discount_pct) > 0 ? `<span class="pop-disc">-${parseFloat(bp.discount_pct).toFixed(0)}%</span>` : ''}
+              </div>
+            </div>
+          </div>` : '<p style="color:var(--text-lt);font-size:.82rem;margin-bottom:10px;">Aucun produit disponible.</p>'}
+          <a href="/stores/${p.slug}/" class="pop-btn">
+            <i class="fa-solid fa-shop me-1"></i>Voir la boutique
+          </a>
+        </div>
+      </div>`;
+
+    marker.bindPopup(popupHtml, { maxWidth: 260 });
+    marker.on('click', () => highlightSidebar(p.id));
+    marker.addTo(map);
+    markers[p.id] = marker;
+  });
+}
+
+// ── Render sidebar list ───────────────────────────────────────
+function renderSidebar(features, userLat, userLng) {
+  const list = document.getElementById('storeList');
+  if (!features.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-lt);font-size:.85rem;"><i class="fa-solid fa-shop" style="display:block;font-size:2.5rem;margin-bottom:10px;opacity:.3;"></i>Aucune boutique trouvée.</div>';
+    return;
+  }
+
+  // Sort by distance if user location available
+  let sorted = [...features];
+  if (userLat !== undefined) {
+    sorted.sort((a, b) => {
+      const da = haversine(userLat, userLng,
+        a.geometry.coordinates[1], a.geometry.coordinates[0]);
+      const db = haversine(userLat, userLng,
+        b.geometry.coordinates[1], b.geometry.coordinates[0]);
+      return da - db;
+    });
+  }
+
+  list.innerHTML = sorted.map(f => {
+    const p   = f.properties;
+    const lat = f.geometry.coordinates[1];
+    const lng = f.geometry.coordinates[0];
+    const dist = userLat !== undefined
+      ? `<span class="map-dist">${formatDist(haversine(userLat,userLng,lat,lng))}</span>`
+      : '';
+    const bp  = p.best_product;
+    return `
+      <div class="map-store-card" id="sidebar-store-${p.id}"
+           onclick="focusStore(${p.id},${lat},${lng})">
+        <div class="map-store-name">🏪 ${escHtml(p.name)} ${dist}</div>
+        <div class="map-store-meta">
+          <i class="fa-solid fa-location-dot me-1"></i>W. ${p.wilaya || '—'} ·
+          ${p.product_count} produit${p.product_count !== 1 ? 's' : ''}
+        </div>
+        ${bp ? `<div style="margin-top:5px;font-size:.78rem;color:var(--green);font-weight:600;">
+          Meilleure offre : ${escHtml(bp.name)} — <strong>${parseFloat(bp.price).toFixed(0)} DA</strong>
+          ${parseFloat(bp.discount_pct)>0 ? `<span style="color:var(--danger);">(-${parseFloat(bp.discount_pct).toFixed(0)}%)</span>` : ''}
+        </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function focusStore(id, lat, lng) {
+  map.setView([lat, lng], 13, { animate: true });
+  if (markers[id]) markers[id].openPopup();
+  highlightSidebar(id);
+}
+
+function highlightSidebar(id) {
+  document.querySelectorAll('.map-store-card').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`sidebar-store-${id}`);
+  if (el) {
+    el.classList.add('active');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function filterMapStores(q) {
+  const filtered = q.trim()
+    ? allFeatures.filter(f =>
+        f.properties.name.toLowerCase().includes(q.toLowerCase()) ||
+        (f.properties.wilaya || '').includes(q)
+      )
+    : allFeatures;
+  renderSidebar(filtered,
+    userMarker ? userMarker.getLatLng().lat : undefined,
+    userMarker ? userMarker.getLatLng().lng : undefined);
+  renderMarkers(filtered);
+}
+
+// ── Geolocation ───────────────────────────────────────────────
+function locateUser() {
+  if (!navigator.geolocation) {
+    showToast('Géolocalisation non supportée par ce navigateur.', 'warning');
+    return;
+  }
+  showToast('Localisation en cours...', 'info', 2000);
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([lat, lng], { icon: makeUserIcon() })
+        .addTo(map)
+        .bindPopup('<div style="font-size:.85rem;font-weight:700;"><i class="fa-solid fa-location-dot me-1" style="color:#0369A1;"></i>Vous êtes ici</div>')
+        .openPopup();
+      map.setView([lat, lng], 10, { animate: true });
+      // Re-sort sidebar by distance
+      renderSidebar(allFeatures, lat, lng);
+      showToast('Position trouvée ! Les boutiques sont triées par distance.', 'success');
+    },
+    err => {
+      showToast('Impossible d\'obtenir votre position. Vérifiez les permissions.', 'error');
+    },
+    { timeout: 10000 }
+  );
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R  = 6371;
+  const dL = (lat2 - lat1) * Math.PI / 180;
+  const dN = (lon2 - lon1) * Math.PI / 180;
+  const a  = Math.sin(dL/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dN/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function formatDist(km) {
+  return km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
+}
+function daysBetween(dateStr) {
+  const d = new Date(dateStr);
+  return Math.ceil((d - new Date()) / 86400000);
+}
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Start ─────────────────────────────────────────────────────
+loadStores();
+</script>
+{% endblock %}

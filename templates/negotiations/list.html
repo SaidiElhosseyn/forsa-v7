@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% block title %}Mes Négociations — FORSA{% endblock %}
+{% block navbar %}{% endblock %}{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3">
+      <i class="fa-solid fa-bars me-1"></i> Menu
+    </button>
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><i class="fa-solid fa-handshake txt-green me-2"></i>Mes Négociations</h1>
+        <div class="breadcrumb"><a href="{% url 'home' %}">Accueil</a><span>/</span>Négociations</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-house"></i> Accueil</a>
+        {% if role == 'buyer' %}
+        <a href="{% url 'products:catalog' %}" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-handshake"></i> Négocier un produit
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--warning);">
+          <div class="stat-icon" style="background:rgba(217,119,6,.1);"><i class="fa-solid fa-hourglass-half" style="color:var(--warning);"></i></div>
+          <div><div class="stat-num" style="color:var(--warning);">{{ counts.pending }}</div><div class="stat-lbl">En attente</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--info);">
+          <div class="stat-icon" style="background:rgba(3,105,161,.1);"><i class="fa-solid fa-arrows-left-right" style="color:var(--info);"></i></div>
+          <div><div class="stat-num" style="color:var(--info);">{{ counts.counter }}</div><div class="stat-lbl">Contre-offre</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--success);">
+          <div class="stat-icon" style="background:rgba(22,163,74,.1);"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></div>
+          <div><div class="stat-num" style="color:var(--success);">{{ counts.accepted }}</div><div class="stat-lbl">Acceptées</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card" style="--stat-color:var(--green);">
+          <div class="stat-icon green"><i class="fa-solid fa-list-check"></i></div>
+          <div><div class="stat-num">{{ negos.count }}</div><div class="stat-lbl">Total</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;">
+      <button onclick="filterNegos('all',this)" class="nego-tab active" data-tab="all">
+        Toutes <span class="tab-badge">{{ negos.count }}</span>
+      </button>
+      <button onclick="filterNegos('pending',this)" class="nego-tab" data-tab="pending">
+        En attente <span class="tab-badge warn">{{ counts.pending }}</span>
+      </button>
+      <button onclick="filterNegos('counter',this)" class="nego-tab" data-tab="counter">
+        Contre-offre <span class="tab-badge info">{{ counts.counter }}</span>
+      </button>
+      <button onclick="filterNegos('accepted',this)" class="nego-tab" data-tab="accepted">
+        Acceptées <span class="tab-badge green">{{ counts.accepted }}</span>
+      </button>
+      <button onclick="filterNegos('ordered',this)" class="nego-tab" data-tab="ordered">Commandées</button>
+      <button onclick="filterNegos('closed',this)" class="nego-tab" data-tab="closed">Clôturées</button>
+    </div>
+
+    <!-- List -->
+    {% if negos %}
+    <div id="negoCards" style="display:flex;flex-direction:column;gap:12px;">
+      {% for n in negos %}
+      {% with days_left=n.time_remaining %}
+      <div class="nego-card" data-status="{{ n.status }}"
+           style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-14);overflow:hidden;transition:var(--ease);"
+           onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;gap:0;flex-wrap:wrap;">
+          <!-- Status strip -->
+          <div style="width:5px;background:{% if n.status == 'pending' %}var(--warning){% elif n.status == 'counter' %}var(--info){% elif n.status == 'accepted' %}var(--success){% elif n.status == 'ordered' %}var(--green){% elif n.status == 'rejected' or n.status == 'expired' or n.status == 'cancelled' %}var(--danger){% else %}var(--border){% endif %};flex-shrink:0;"></div>
+
+          <!-- Product image -->
+          <div style="width:90px;flex-shrink:0;">
+            <div style="width:90px;height:90px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:2.5rem;">
+              {% if n.product.images.first %}
+              <img src="{{ n.product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;">
+              {% else %}{{ n.product.category.icon|default:"📦" }}{% endif %}
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div style="flex:1;padding:12px 14px;min-width:0;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+              <div>
+                <a href="{% url 'products:detail' n.product.slug %}" style="font-weight:800;font-size:.95rem;color:var(--text);">{{ n.product.name|truncatechars:40 }}</a>
+                <div style="font-size:.78rem;color:var(--text-lt);margin-top:2px;">
+                  {% if role == 'buyer' %}
+                    <i class="fa-solid fa-shop me-1 txt-green"></i>{{ n.product.store.name }}
+                    · Vendeur : {{ n.vendor.get_full_name|default:n.vendor.username }}
+                  {% else %}
+                    <i class="fa-solid fa-user me-1" style="color:var(--info);"></i>Acheteur : {{ n.buyer.get_full_name|default:n.buyer.username }}
+                  {% endif %}
+                  · <i class="fa-solid fa-calendar me-1"></i>{{ n.created_at|date:"d/m/Y H:i" }}
+                </div>
+              </div>
+              <!-- Status badge -->
+              <span style="font-size:.78rem;font-weight:700;padding:4px 12px;border-radius:99px;white-space:nowrap;
+                background:{% if n.status == 'pending' %}rgba(217,119,6,.12){% elif n.status == 'counter' %}rgba(3,105,161,.12){% elif n.status == 'accepted' %}rgba(22,163,74,.12){% elif n.status == 'ordered' %}rgba(26,107,47,.12){% else %}rgba(220,38,38,.1){% endif %};
+                color:{% if n.status == 'pending' %}var(--warning){% elif n.status == 'counter' %}var(--info){% elif n.status == 'accepted' %}var(--success){% elif n.status == 'ordered' %}var(--green){% else %}var(--danger){% endif %};">
+                {% if n.status == 'pending' %}⏳ En attente
+                {% elif n.status == 'counter' %}🔄 Contre-offre
+                {% elif n.status == 'accepted' %}✅ Acceptée
+                {% elif n.status == 'ordered' %}🛒 Commandée
+                {% elif n.status == 'rejected' %}❌ Refusée
+                {% elif n.status == 'expired' %}⏰ Expirée
+                {% else %}🚫 Annulée{% endif %}
+              </span>
+            </div>
+
+            <!-- Prix timeline -->
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+              <div style="background:var(--surface-2);border-radius:var(--r-6);padding:4px 10px;text-align:center;">
+                <div style="font-size:.6rem;color:var(--text-lt);text-transform:uppercase;letter-spacing:.05em;">Prix origine</div>
+                <div style="font-size:.88rem;font-weight:700;color:var(--text);">{{ n.original_price|floatformat:0 }} DA</div>
+              </div>
+              <i class="fa-solid fa-arrow-right" style="color:var(--text-xl);font-size:.75rem;"></i>
+              <div style="background:rgba(3,105,161,.1);border-radius:var(--r-6);padding:4px 10px;text-align:center;">
+                <div style="font-size:.6rem;color:var(--info);text-transform:uppercase;letter-spacing:.05em;">Offre acheteur</div>
+                <div style="font-size:.88rem;font-weight:800;color:var(--info);">{{ n.buyer_price|floatformat:0 }} DA</div>
+              </div>
+              {% if n.counter_price %}
+              <i class="fa-solid fa-arrow-right" style="color:var(--text-xl);font-size:.75rem;"></i>
+              <div style="background:rgba(230,80,0,.1);border-radius:var(--r-6);padding:4px 10px;text-align:center;">
+                <div style="font-size:.6rem;color:var(--orange);text-transform:uppercase;letter-spacing:.05em;">Contre-offre</div>
+                <div style="font-size:.88rem;font-weight:800;color:var(--orange);">{{ n.counter_price|floatformat:0 }} DA</div>
+              </div>
+              {% endif %}
+              {% if n.final_price %}
+              <i class="fa-solid fa-arrow-right" style="color:var(--text-xl);font-size:.75rem;"></i>
+              <div style="background:rgba(22,163,74,.12);border-radius:var(--r-6);padding:4px 10px;text-align:center;border:1.5px solid var(--success);">
+                <div style="font-size:.6rem;color:var(--success);text-transform:uppercase;letter-spacing:.05em;">Prix final</div>
+                <div style="font-size:.9rem;font-weight:900;color:var(--success);">{{ n.final_price|floatformat:0 }} DA</div>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Expiry countdown for active negos -->
+            {% if n.status in 'pending,counter' and n.time_remaining > 0 %}
+            <div style="font-size:.75rem;color:var(--text-lt);display:flex;align-items:center;gap:5px;">
+              <i class="fa-regular fa-clock" style="color:var(--warning);"></i>
+              Expire dans <span id="timer-{{ n.pk }}" data-seconds="{{ n.time_remaining }}" style="font-weight:700;color:var(--warning);">…</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Actions -->
+          <div style="padding:12px;display:flex;flex-direction:column;gap:6px;justify-content:center;flex-shrink:0;min-width:130px;">
+            <a href="{% url 'negotiations:detail' n.pk %}" class="btn btn-primary btn-sm" style="justify-content:center;">
+              <i class="fa-solid fa-eye"></i> Voir détail
+            </a>
+            {% if n.status == 'accepted' and not n.order and role == 'buyer' %}
+            <a href="{% url 'negotiations:create_order' n.pk %}" class="btn btn-sm" style="background:var(--success);color:#fff;border:none;cursor:pointer;border-radius:var(--r-6);padding:6px 12px;font-size:.78rem;font-weight:700;text-align:center;">
+              <i class="fa-solid fa-shopping-cart"></i> Commander
+            </a>
+            {% endif %}
+            {% if n.status in 'pending,counter' %}
+            <form method="post" action="{% url 'negotiations:cancel' n.pk %}" onsubmit="return confirm('Annuler cette négociation ?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-full" style="background:var(--surface-3);color:var(--danger);border:1px solid rgba(220,38,38,.2);font-size:.78rem;">
+                <i class="fa-solid fa-xmark"></i> Annuler
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+      {% empty %}
+      <div style="text-align:center;padding:64px 24px;background:var(--surface);border-radius:var(--r-16);border:2px dashed var(--border);">
+        <i class="fa-solid fa-handshake" style="font-size:3.5rem;color:var(--text-xl);display:block;margin-bottom:14px;"></i>
+        <h4 style="font-weight:800;margin-bottom:8px;">Aucune négociation</h4>
+        <p style="color:var(--text-lt);max-width:360px;margin:0 auto 20px;">
+          {% if role == 'buyer' %}Cliquez sur "Négocier" sur n'importe quel produit pour commencer.
+          {% else %}Vos acheteurs pourront négocier sur vos produits.{% endif %}
+        </p>
+        {% if role == 'buyer' %}<a href="{% url 'products:catalog' %}" class="btn btn-primary btn-md"><i class="fa-solid fa-handshake"></i> Parcourir les produits</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+.nego-tab{background:none;border:none;padding:10px 16px;font-size:.875rem;font-weight:600;color:var(--text-lt);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--ease);}
+.nego-tab.active,.nego-tab:hover{color:var(--green);border-bottom-color:var(--green);}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:99px;font-size:.68rem;font-weight:800;padding:0 5px;background:var(--surface-3);color:var(--text-md);margin-left:5px;}
+.tab-badge.warn{background:rgba(217,119,6,.15);color:var(--warning);}
+.tab-badge.info{background:rgba(3,105,161,.15);color:var(--info);}
+.tab-badge.green{background:var(--green-xl);color:var(--green);}
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+function filterNegos(tab, btn) {
+  document.querySelectorAll('.nego-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.nego-card').forEach(card => {
+    const st = card.dataset.status;
+    const show = tab === 'all'
+      || tab === 'closed' && ['rejected','expired','cancelled'].includes(st)
+      || tab === st;
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+// Countdown timers
+document.querySelectorAll('[id^="timer-"]').forEach(el => {
+  let secs = parseInt(el.dataset.seconds) || 0;
+  function tick() {
+    if (secs <= 0) { el.textContent = 'Expirée'; el.style.color='var(--danger)'; return; }
+    const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+    el.textContent = h > 0 ? `${h}h ${m}min` : m > 0 ? `${m}min ${s}s` : `${s}s`;
+    secs--;
+    setTimeout(tick, 1000);
+  }
+  tick();
+});
+</script>
+{% endblock %}

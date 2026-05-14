@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Connexion — FORSA{% endblock %}
+{% block full_header %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="auth-layout">
+
+  <!-- ═══ LEFT PANEL ═══ -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      {% load static %}
+      <img src="{% static 'images/forsa_logo.png' %}" alt="FORSA فرصة" style="height:72px;width:auto;margin:0 auto 24px;display:block;">
+      <h2 style="color:#fff;font-size:1.8rem;font-weight:900;margin-bottom:10px;letter-spacing:-.03em;">Bienvenue sur FORSA</h2>
+      <p style="color:rgba(255,255,255,.65);font-size:.9rem;line-height:1.75;margin-bottom:28px;">La marketplace des produits de qualité à prix réduits. 14 catégories, livraison nationale.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,166,35,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-tag" style="color:#FFB940;font-size:.95rem;"></i></div>
+          <div style="font-size:.875rem;color:rgba(255,255,255,.75);">Jusqu'à <strong style="color:#FFB940;">-70%</strong> de réduction automatique</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,166,35,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-truck-fast" style="color:#FFB940;font-size:.95rem;"></i></div>
+          <div style="font-size:.875rem;color:rgba(255,255,255,.75);">Livraison rapide dans tout le pays</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,166,35,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-store" style="color:#FFB940;font-size:.95rem;"></i></div>
+          <div style="font-size:.875rem;color:rgba(255,255,255,.75);">Gérez vos invendus facilement et profitablement</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <div class="auth-right">
+    <div class="auth-box">
+      <a href="{% url 'home' %}" style="display:inline-flex;align-items:center;gap:7px;font-size:.8rem;color:var(--text-lt);margin-bottom:24px;text-decoration:none;transition:color .2s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--text-lt)'">
+        <i class="fa-solid fa-arrow-left"></i> Retour à l'accueil
+      </a>
+
+      <h2 class="auth-title" style="margin-bottom:6px;">Connexion à FORSA</h2>
+      <p class="auth-sub" style="margin-bottom:18px;">Choisissez votre profil pour continuer</p>
+
+      <!-- Role selection -->
+      <div class="role-cards" id="roleCards">
+        <div class="role-card selected" id="roleConsommateur" onclick="selectRole('customer')">
+          <div class="role-icon"><i class="fa-solid fa-user"></i></div>
+          <div class="role-title">Consommateur</div>
+          <div class="role-sub">J'achète des produits à prix réduits</div>
+        </div>
+        <div class="role-card" id="roleCommercant" onclick="selectRole('vendor')">
+          <div class="role-icon"><i class="fa-solid fa-store"></i></div>
+          <div class="role-title">Commerçant</div>
+          <div class="role-sub">Je vends mes invendus et gère mes offres</div>
+        </div>
+      </div>
+
+      <!-- Non-field errors -->
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        <i class="fa-solid fa-circle-xmark"></i>
+        <div>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+      </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" novalidate>
+        {% csrf_token %}
+        {% if request.GET.next %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+
+        <!-- Email/Username -->
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.auto_id }}">
+            <i class="fa-solid fa-envelope me-2" style="color:var(--green);"></i>Email ou nom d'utilisateur <span style="color:var(--danger);">*</span>
+          </label>
+          {{ form.username }}
+          {% if form.username.errors %}
+          <div class="form-error"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.username.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label class="form-label" for="id_password" style="margin:0;">
+              <i class="fa-solid fa-lock me-2" style="color:var(--green);"></i>Mot de passe <span style="color:var(--danger);">*</span>
+            </label>
+            <a href="{% url 'accounts:password_change' %}" style="font-size:.78rem;color:var(--green);text-decoration:none;">Mot de passe oublié ?</a>
+          </div>
+          <div style="position:relative;">
+            {{ form.password }}
+            <button type="button" id="togglePwd" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-lt);padding:4px 6px;border-radius:4px;transition:color .2s;" title="Afficher/Masquer">
+              <i class="fa-solid fa-eye" id="togglePwdIcon"></i>
+            </button>
+          </div>
+          {% if form.password.errors %}
+          <div class="form-error"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.password.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Remember me -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px;">
+          <input type="checkbox" id="rememberMe" name="remember" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+          <label for="rememberMe" style="font-size:.875rem;color:var(--text-md);cursor:pointer;margin:0;">Se souvenir de moi</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-full">
+          <i class="fa-solid fa-right-to-bracket"></i> Se connecter
+        </button>
+      </form>
+
+      <div class="auth-divider">ou</div>
+      <div class="auth-footer">
+        Pas encore de compte FORSA ?<br style="margin-bottom:6px;">
+        <a href="{% url 'accounts:register' %}" style="font-size:.95rem;font-weight:700;">
+          Créer un compte gratuitement <i class="fa-solid fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectRole(role) {
+  const consCard = document.getElementById('roleConsommateur');
+  const vendCard = document.getElementById('roleCommercant');
+  if (role === 'customer') {
+    consCard.classList.add('selected');
+    vendCard.classList.remove('selected');
+  } else {
+    vendCard.classList.add('selected');
+    consCard.classList.remove('selected');
+  }
+}
+
+document.getElementById('togglePwd').addEventListener('click', function () {
+  var inp  = document.getElementById('id_password');
+  var icon = document.getElementById('togglePwdIcon');
+  if (!inp) return;
+  var isPassword = inp.type === 'password';
+  inp.type = isPassword ? 'text' : 'password';
+  icon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+});
+</script>
+{% endblock %}

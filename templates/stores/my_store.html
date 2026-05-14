@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Boutique — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+    <div class="page-header"><div><h1 class="page-title">🏪 {% if store %}{{ store.name }}{% else %}Ma Boutique{% endif %}</h1><div class="breadcrumb"><a href="{% url 'dashboard:vendor' %}">Dashboard</a><span>/</span>Boutique</div></div>{% if store %}<div style="display:flex;gap:8px;"><a href="{% url 'stores:detail' store.slug %}" class="btn btn-ghost btn-sm" target="_blank"><i class="fa-solid fa-eye"></i> Voir</a>{% if 'my_store' != 'edit' %}<a href="{% url 'stores:edit' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-pencil"></i> Modifier</a>{% endif %}<a href="{% url 'products:create' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Ajouter produit</a></div>{% endif %}</div>
+    {% if 'my_store' == 'my_store' %}
+    {% if products %}
+    <div class="table-wrap"><div class="table-header"><h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-box-open me-2 txt-green"></i>Mes produits ({{ products.count }})</h5><a href="{% url 'products:create' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Ajouter</a></div>
+    <table><thead><tr><th>Produit</th><th>Prix</th><th>Réduction</th><th>Péremption</th><th>Stock</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>{% for p in products %}<tr>
+      <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-3);">{% if p.images.first %}<img src="{{ p.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;">{% else %}<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.9rem;">{{ p.category.icon|default:"📦" }}</div>{% endif %}</div><div><div style="font-weight:600;font-size:.85rem;">{{ p.name|truncatechars:26 }}</div><div style="font-size:.72rem;color:var(--text-lt);">{{ p.views_count }} vues</div></div></div></td>
+      <td style="font-weight:800;color:var(--green);font-size:.875rem;">{{ p.current_price|floatformat:0 }} DA</td>
+      <td>{% if p.discount_pct > 0 %}<span class="badge badge-red">-{{ p.discount_pct|floatformat:0 }}%</span>{% else %}<span style="color:var(--text-lt);">—</span>{% endif %}</td>
+      <td><span class="badge-expiry {{ p.expiry_urgency }}" style="position:static;display:inline-block;">{{ p.expiry_date|date:"d/m/Y" }}</span></td>
+      <td style="font-size:.875rem;{% if p.quantity == 0 %}color:var(--danger);font-weight:700;{% endif %}">{{ p.quantity }} {{ p.unit }}</td>
+      <td><span class="badge {% if p.status == 'active' %}badge-green{% elif p.status == 'expired' %}badge-red{% else %}badge-gray{% endif %}">{{ p.get_status_display }}</span></td>
+      <td><div style="display:flex;gap:5px;"><a href="{% url 'products:detail' p.slug %}" class="btn btn-icon" style="width:30px;height:30px;" title="Voir"><i class="fa-solid fa-eye" style="font-size:.75rem;"></i></a><a href="{% url 'products:edit' p.slug %}" class="btn btn-icon" style="width:30px;height:30px;background:rgba(245,166,35,.1);color:var(--gold);" title="Modifier"><i class="fa-solid fa-pencil" style="font-size:.75rem;"></i></a></div></td>
+    </tr>{% empty %}<tr><td colspan="7" class="table-empty"><i class="fa-solid fa-box-open"></i>Aucun produit.<br><a href="{% url 'products:create' %}" style="color:var(--green);">Ajouter votre premier produit →</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}
+    <div style="background:var(--surface);border:2px dashed var(--green);border-radius:var(--r-16);padding:52px;text-align:center;"><div style="font-size:3rem;margin-bottom:14px;">📦</div><h4 style="font-weight:800;color:var(--green);">Aucun produit pour le moment</h4><p style="color:var(--text-lt);margin:8px auto 22px;max-width:380px;">Ajoutez votre premier produit pour commencer à vendre sur FORSA.</p><a href="{% url 'products:create' %}" class="btn btn-primary btn-md"><i class="fa-solid fa-circle-plus"></i> Ajouter un produit</a></div>
+    {% endif %}
+    {% else %}
+    <div class="row justify-content-center"><div class="col-lg-7"><div class="card card-body">
+      <h5 style="font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">{% if 'my_store' == 'create' %}<i class="fa-solid fa-store me-2 txt-green"></i>Créer ma boutique{% else %}<i class="fa-solid fa-pen-to-square me-2 txt-green"></i>Modifier ma boutique{% endif %}</h5>
+      <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+        {% for field in form %}<div class="form-group"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}</div>{% endfor %}
+        <div style="display:flex;gap:10px;margin-top:8px;"><button type="submit" class="btn btn-primary btn-md"><i class="fa-solid fa-check"></i> {% if 'my_store' == 'create' %}Créer{% else %}Enregistrer{% endif %}</button><a href="{% url 'dashboard:vendor' %}" class="btn btn-ghost btn-md">Annuler</a></div>
+      </form>
+    </div></div></div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

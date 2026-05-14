@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Mon Espace — FORSA{% endblock %}
+{% block navbar %}{% endblock %}
+{% block catnav %}{% endblock %}
+{% block full_header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  {% include 'partials/sidebar.html' %}
+  <main class="dashboard-main">
+    <button id="sidebarToggle" class="btn btn-ghost btn-sm d-xl-none mb-3"><i class="fa-solid fa-bars me-1"></i> Menu</button>
+    <div class="page-header">
+      <div><h1 class="page-title">👋 Bonjour, {{ request.user.first_name|default:request.user.username }} !</h1><div class="breadcrumb">Mon espace personnel</div></div>
+      <div style="display:flex;gap:8px;">
+        <a href="{% url 'home' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-house"></i> Accueil</a>
+        <a href="{% url 'products:catalog' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> Explorer les offres</a>
+      </div>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-4"><div class="stat-card" style="--stat-color:var(--green);"><div class="stat-icon green"><i class="fa-solid fa-bags-shopping"></i></div><div><div class="stat-num">{{ orders_count|default:"0" }}</div><div class="stat-lbl">Commandes</div></div></div></div>
+          <div class="col-sm-4"><div class="stat-card" style="--stat-color:var(--gold);"><div class="stat-icon gold"><i class="fa-solid fa-piggy-bank"></i></div><div><div class="stat-num">{{ total_savings|default:"0"|floatformat:0 }}</div><div class="stat-lbl">DA économisés</div></div></div></div>
+          <div class="col-sm-4"><div class="stat-card" style="--stat-color:var(--info);"><div class="stat-icon blue"><i class="fa-solid fa-coins"></i></div><div><div class="stat-num">{{ total_spent|default:"0"|floatformat:0 }}</div><div class="stat-lbl">DA dépensés</div></div></div></div>
+        </div>
+        <div class="table-wrap mb-4">
+          <div class="table-header"><h5 style="margin:0;font-weight:800;"><i class="fa-solid fa-clock-rotate-left me-2 txt-green"></i>Mes dernières commandes</h5><a href="{% url 'orders:list' %}" style="font-size:.82rem;color:var(--green);">Voir tout <i class="fa-solid fa-arrow-right ms-1"></i></a></div>
+          <table><thead><tr><th>N°</th><th>Date</th><th>Articles</th><th>Total</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for order in recent_orders %}
+            <tr>
+              <td><a href="{% url 'orders:detail' order.order_number %}" style="font-family:monospace;font-size:.78rem;color:var(--green);">{{ order.order_number|slice:":10" }}</a></td>
+              <td style="font-size:.82rem;color:var(--text-lt);">{{ order.created_at|date:"d/m/Y" }}</td>
+              <td style="font-size:.85rem;">{{ order.items.count }} article{{ order.items.count|pluralize }}</td>
+              <td style="font-weight:800;color:var(--green);">{{ order.total_amount|floatformat:0 }} DA</td>
+              <td><span class="badge {% if order.status == 'delivered' %}badge-green{% elif order.status == 'cancelled' %}badge-red{% elif order.status == 'confirmed' %}badge-blue{% else %}badge-gray{% endif %}">{{ order.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="table-empty"><i class="fa-solid fa-bag-shopping"></i>Aucune commande.<br><a href="{% url 'products:catalog' %}" style="color:var(--green);">Explorer les offres →</a></td></tr>
+            {% endfor %}
+          </tbody></table>
+        </div>
+        <!-- Recommended products -->
+        <div>
+          <div class="section-header" style="margin-bottom:14px;">
+            <div><div class="section-title" style="font-size:1rem;">🔥 Offres recommandées</div></div>
+            <a href="{% url 'products:catalog' %}?sort=discount" class="section-link">Voir tout</a>
+          </div>
+          <div class="row g-3">
+            {% for p in recommended %}
+            <div class="col-6 col-md-3">
+              <div class="product-card">
+                <div class="product-img" style="aspect-ratio:1;">
+                  {% if p.images.first %}<img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+                  {% else %}<div class="product-img-placeholder" style="font-size:2rem;">{{ p.category.icon|default:"📦" }}</div>{% endif %}
+                  {% if p.discount_pct > 0 %}<span class="badge-discount">-{{ p.discount_pct|floatformat:0 }}%</span>{% endif %}
+                </div>
+                <div class="product-body" style="padding:10px;">
+                  <a href="{% url 'products:detail' p.slug %}" class="product-name" style="font-size:.8rem;color:inherit;">{{ p.name }}</a>
+                  <div class="product-prices"><span class="price-now" style="font-size:.95rem;">{{ p.current_price|floatformat:0 }} DA</span>{% if p.discount_pct > 0 %}<span class="price-old">{{ p.original_price|floatformat:0 }}</span>{% endif %}</div>
+                  <a href="{% url 'products:detail' p.slug %}" class="btn btn-primary btn-xs btn-full mt-1" style="justify-content:center;">Voir</a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <!-- Right column -->
+      <div class="col-lg-4">
+        {% if virtual_card %}
+        <div class="mb-4">
+          <div class="section-header" style="margin-bottom:12px;">
+            <div class="section-title" style="font-size:.95rem;"><i class="fa-solid fa-credit-card me-2 txt-green"></i>Ma carte virtuelle</div>
+            <a href="{% url 'payments:virtual_card' %}" class="section-link" style="font-size:.78rem;">Historique</a>
+          </div>
+          <div class="vcard">
+            <div class="vcard-chip"></div>
+            <div class="vcard-number">{{ virtual_card.card_number|slice:":4" }} **** **** {{ virtual_card.card_number|slice:"-4:" }}</div>
+            <div class="vcard-label">Solde disponible</div>
+            <div class="vcard-balance">{{ virtual_card.balance|floatformat:0 }} DA</div>
+            <div class="vcard-bottom">
+              <div class="vcard-holder">{{ request.user.get_full_name|upper }}</div>
+              <span class="vcard-test-badge">TEST</span>
+            </div>
+          </div>
+          <p style="font-size:.72rem;color:var(--text-lt);margin-top:8px;text-align:center;"><i class="fa-solid fa-circle-info me-1"></i>Carte de test · Baridimob disponible bientôt</p>
+        </div>
+        {% endif %}
+        <!-- Quick links -->
+        <div class="card card-body">
+          <h5 style="font-weight:800;margin-bottom:14px;"><i class="fa-solid fa-bolt me-2 txt-gold"></i>Raccourcis</h5>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            {% for icon, label, url, color in quick_links %}{% endfor %}
+            <a href="{% url 'products:catalog' %}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-3);border-radius:var(--r-8);color:var(--text-md);text-decoration:none;font-size:.875rem;font-weight:500;transition:var(--ease);" onmouseover="this.style.background='var(--green-xl)';this.style.color='var(--green)'" onmouseout="this.style.background='var(--surface-3)';this.style.color='var(--text-md)'">
+              <i class="fa-solid fa-grid-2" style="color:var(--green);width:18px;text-align:center;"></i> Explorer les produits <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-xl);"></i>
+            </a>
+            <a href="{% url 'orders:cart' %}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-3);border-radius:var(--r-8);color:var(--text-md);text-decoration:none;font-size:.875rem;font-weight:500;transition:var(--ease);" onmouseover="this.style.background='var(--green-xl)';this.style.color='var(--green)'" onmouseout="this.style.background='var(--surface-3)';this.style.color='var(--text-md)'">
+              <i class="fa-solid fa-bag-shopping" style="color:var(--orange);width:18px;text-align:center;"></i> Mon panier <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-xl);"></i>
+            </a>
+            <a href="{% url 'orders:list' %}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-3);border-radius:var(--r-8);color:var(--text-md);text-decoration:none;font-size:.875rem;font-weight:500;transition:var(--ease);" onmouseover="this.style.background='var(--green-xl)';this.style.color='var(--green)'" onmouseout="this.style.background='var(--surface-3)';this.style.color='var(--text-md)'">
+              <i class="fa-solid fa-clock-rotate-left" style="color:var(--info);width:18px;text-align:center;"></i> Mes commandes <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-xl);"></i>
+            </a>
+            <a href="{% url 'payments:virtual_card' %}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-3);border-radius:var(--r-8);color:var(--text-md);text-decoration:none;font-size:.875rem;font-weight:500;transition:var(--ease);" onmouseover="this.style.background='var(--green-xl)';this.style.color='var(--green)'" onmouseout="this.style.background='var(--surface-3)';this.style.color='var(--text-md)'">
+              <i class="fa-solid fa-credit-card" style="color:var(--gold);width:18px;text-align:center;"></i> Carte virtuelle <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-xl);"></i>
+            </a>
+            <a href="{% url 'accounts:profile' %}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-3);border-radius:var(--r-8);color:var(--text-md);text-decoration:none;font-size:.875rem;font-weight:500;transition:var(--ease);" onmouseover="this.style.background='var(--green-xl)';this.style.color='var(--green)'" onmouseout="this.style.background='var(--surface-3)';this.style.color='var(--text-md)'">
+              <i class="fa-solid fa-user-gear" style="color:var(--text-lt);width:18px;text-align:center;"></i> Mon profil <i class="fa-solid fa-chevron-right ms-auto" style="font-size:.7rem;color:var(--text-xl);"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

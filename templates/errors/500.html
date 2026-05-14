@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}500 — Erreur serveur{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="error-code">500</div>
+  <h1 class="error-title">Erreur serveur</h1>
+  <p class="error-sub">Une erreur inattendue s'est produite. Notre équipe a été notifiée.</p>
+  <a href="{% url 'home' %}" class="btn btn-primary btn-md"><i class="fa-solid fa-house"></i> Retour à l'accueil</a>
+</div>
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% block title %}Livraison ou retrait — FORSA{% endblock %}
+{% block content %}
+<div class="container-forsa" style="padding-top:22px;padding-bottom:52px;max-width:1100px;">
+
+  <!-- Breadcrumb -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;flex-wrap:wrap;">
+    <a href="{% url 'orders:cart' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Panier</a>
+    <span style="color:var(--border-md);">/</span>
+    <h1 style="font-size:1.4rem;font-weight:900;margin:0;letter-spacing:-.03em;">
+      <i class="fa-solid fa-truck txt-green me-2"></i>Livraison ou retrait
+    </h1>
+  </div>
+
+  <!-- Steps -->
+  <div class="checkout-steps" style="margin-bottom:28px;">
+    <div class="step done"><div class="step-circle"><i class="fa-solid fa-check" style="font-size:.7rem;"></i></div><div class="step-label">Panier</div></div>
+    <div class="step-line done"></div>
+    <div class="step active"><div class="step-circle">2</div><div class="step-label">Livraison & Paiement</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-circle">3</div><div class="step-label">Confirmation</div></div>
+  </div>
+
+  <!-- Expiry warning -->
+  {% if expiry_conflicts %}
+  <div class="alert alert-warning" style="border-radius:var(--r-12);padding:16px 20px;margin-bottom:20px;border:none;background:linear-gradient(135deg,#FFF8E1,#FFFDE7);border-left:4px solid var(--warning);">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="font-size:2rem;flex-shrink:0;">⚠️</div>
+      <div style="flex:1;">
+        <div style="font-weight:800;font-size:1rem;color:var(--warning);margin-bottom:6px;">Attention — Problème de délai de livraison !</div>
+        <p style="font-size:.875rem;color:var(--text-md);margin-bottom:12px;line-height:1.6;">
+          {{ expiry_conflicts|length }} produit{{ expiry_conflicts|length|pluralize }} risque{{ expiry_conflicts|length|pluralize }} d'expirer avant la réception.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <form method="post" action="{% url 'orders:checkout' %}">
+            {% csrf_token %}
+            <input type="hidden" name="delivery_wilaya"  value="{{ selected_wilaya }}">
+            <input type="hidden" name="delivery_address" value="{{ selected_address }}">
+            <input type="hidden" name="delivery_phone"   value="{{ selected_phone }}">
+            <input type="hidden" name="delivery_method"  value="{{ selected_method }}">
+            <input type="hidden" name="payment_method"   value="{{ selected_payment }}">
+            <input type="hidden" name="force_order"       value="1">
+            <button type="submit" class="btn btn-secondary btn-sm"><i class="fa-solid fa-triangle-exclamation"></i> Commander quand même</button>
+          </form>
+          <a href="{% url 'orders:cart' %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Modifier le panier</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" id="checkoutForm" novalidate>
+    {% csrf_token %}
+    <div class="row g-4">
+      <div class="col-lg-7">
+
+        <!-- ══ STEP 1: Choose delivery type ══ -->
+        <div class="card card-body mb-4">
+          <h5 style="font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:9px;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;flex-shrink:0;">1</span>
+            Choisissez votre mode de réception
+          </h5>
+
+          <!-- Two big delivery choice cards -->
+          <div class="delivery-choice-grid" id="deliveryChoiceGrid">
+            <div class="delivery-choice-card selected" id="choiceHome" onclick="selectDeliveryType('home')">
+              <div class="dcc-icon"><i class="fa-solid fa-house"></i></div>
+              <div class="dcc-title">Livraison à domicile</div>
+              <div class="dcc-sub">Reçu chez vous dans 2–4 jours</div>
+            </div>
+            <div class="delivery-choice-card" id="choiceStore" onclick="selectDeliveryType('pickup')">
+              <div class="dcc-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="dcc-title">Retrait en magasin</div>
+              <div class="dcc-sub">Disponible immédiatement · Gratuit</div>
+            </div>
+          </div>
+
+          <!-- Home delivery form -->
+          <div id="homeDeliveryForm">
+            <h6 style="font-weight:700;margin-bottom:12px;color:var(--text-md);">
+              <i class="fa-solid fa-location-dot txt-green me-2"></i>Adresse de livraison
+            </h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Wilaya <span style="color:var(--danger);">*</span></label>
+                  <select name="delivery_wilaya" class="form-control" required id="delivery-wilaya"
+                          onchange="updateCheckoutTotal(); checkExpiryLive();">
+                    <option value="">— Sélectionner —</option>
+                    {% for code, name in wilayas %}
+                    <option value="{{ code }}" {% if user_wilaya == code %}selected{% endif %}>{{ code }} — {{ name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label">Téléphone <span style="color:var(--danger);">*</span></label>
+                  <input type="tel" name="delivery_phone" class="form-control" value="{{ user_phone }}" placeholder="0550 000 000" required>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-group">
+                  <label class="form-label">Adresse complète <span style="color:var(--danger);">*</span></label>
+                  <textarea name="delivery_address" class="form-control" rows="2"
+                            placeholder="N° rue, quartier, commune..." required>{{ user_address }}</textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expiry warning live -->
+            <div id="expiryWarning" style="display:none;background:#FFF8E1;border:1.5px solid #FFE082;border-radius:var(--r-10);padding:11px 14px;margin-top:12px;font-size:.84rem;color:#92400E;">
+              <i class="fa-solid fa-triangle-exclamation me-2"></i><span id="expiryWarningText"></span>
+            </div>
+
+            <!-- Mode de livraison -->
+            <h6 style="font-weight:700;margin:16px 0 10px;color:var(--text-md);">
+              <i class="fa-solid fa-truck txt-green me-2"></i>Créneau de livraison
+            </h6>
+            <div class="time-slots">
+              <label class="time-slot selected">
+                <input type="radio" name="delivery_method" value="standard" checked onchange="updateCheckoutTotal(); checkExpiryLive();">
+                <div class="slot-name">Standard</div>
+                <div class="slot-hours" id="std-price-lbl">2–3 jours · 450 DA</div>
+              </label>
+              <label class="time-slot">
+                <input type="radio" name="delivery_method" value="express" onchange="selectTimeSlot(this.closest('.time-slot')); updateCheckoutTotal(); checkExpiryLive();">
+                <div class="slot-name">Express ⚡</div>
+                <div class="slot-hours" id="exp-price-lbl">48h · 750 DA</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Store pickup form -->
+          <div id="storePickupForm" style="display:none;">
+            <input type="hidden" name="delivery_method" value="pickup">
+            <input type="hidden" name="delivery_wilaya"  value="{{ user_wilaya }}">
+            <input type="hidden" name="delivery_address" value="Retrait en magasin">
+            <input type="hidden" name="delivery_phone"   value="{{ user_phone }}">
+            <div style="background:var(--green-xl);border:1.5px solid var(--green);border-radius:var(--r-10);padding:16px;text-align:center;">
+              <i class="fa-solid fa-store" style="font-size:2rem;color:var(--green);display:block;margin-bottom:8px;"></i>
+              <div style="font-weight:700;color:var(--green);margin-bottom:4px;">Retrait en magasin disponible immédiatement</div>
+              <div style="font-size:.82rem;color:var(--text-md);">Présentez votre confirmation de commande au comptoir du vendeur.</div>
+              <div style="font-size:.82rem;color:var(--success);font-weight:700;margin-top:8px;"><i class="fa-solid fa-check me-1"></i>Gratuit</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ STEP 2: Payment ══ -->
+        <div class="card card-body">
+          <h5 style="font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:9px;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;flex-shrink:0;">2</span>
+            <i class="fa-solid fa-credit-card txt-green"></i>Mode de paiement
+          </h5>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            {% if virtual_card and virtual_card.is_active %}
+            <div class="delivery-option selected payment-option" data-method="virtual_card" onclick="selectPayment('virtual_card')">
+              <input type="radio" name="payment_method" value="virtual_card" checked style="display:none;">
+              <div class="delivery-icon" style="background:rgba(26,107,47,.1);font-size:1.3rem;">💳</div>
+              <div><div class="delivery-name">Carte Virtuelle FORSA</div><div class="delivery-desc">Solde : <strong style="color:var(--green);">{{ virtual_card.balance|floatformat:0 }} DA</strong></div></div>
+              <span class="badge badge-green" style="margin-left:auto;">Disponible</span>
+            </div>
+            {% endif %}
+            <div class="delivery-option payment-option {% if not virtual_card %}selected{% endif %}" data-method="cod" onclick="selectPayment('cod')">
+              <input type="radio" name="payment_method" value="cod" {% if not virtual_card %}checked{% endif %} style="display:none;">
+              <div class="delivery-icon" style="background:rgba(245,166,35,.1);"><i class="fa-solid fa-money-bills" style="color:var(--gold);"></i></div>
+              <div><div class="delivery-name">Cash à la livraison (COD)</div><div class="delivery-desc">Payez en espèces à la réception</div></div>
+              <span class="badge badge-green" style="margin-left:auto;">Populaire</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SUMMARY ══ -->
+      <div class="col-lg-5">
+        <div class="card card-body" style="position:sticky;top:88px;">
+          <h5 style="font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+            <i class="fa-solid fa-receipt me-2 txt-green"></i>Récapitulatif
+          </h5>
+          <div style="max-height:260px;overflow-y:auto;margin-bottom:14px;">
+            {% for item in items %}
+            <div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+              <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-2);">
+                {% if item.product.images.first %}
+                  <img src="{{ item.product.images.first.image.url }}" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                  <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1rem;">{{ item.product.category.icon|default:"📦" }}</div>
+                {% endif %}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.product.name }}</div>
+                <div style="font-size:.72rem;color:var(--text-lt);">×{{ item.quantity }} · {{ item.product.store.name }}</div>
+              </div>
+              <div style="font-weight:700;font-size:.88rem;color:var(--green);flex-shrink:0;">{{ item.subtotal|floatformat:0 }} DA</div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:.875rem;">
+              <span style="color:var(--text-md);">Sous-total</span>
+              <span id="checkout-subtotal" data-value="{{ cart.total }}" style="font-weight:600;">{{ cart.total|floatformat:0 }} DA</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.875rem;">
+              <span style="color:var(--text-md);">Frais de livraison</span>
+              <span id="delivery-price" style="font-weight:600;color:var(--green);">450 DA</span>
+            </div>
+            <div style="font-size:.72rem;color:var(--text-lt);">
+              <i class="fa-solid fa-clock me-1"></i>Délai estimé : <span id="delivery-days">2–3 jours</span>
+            </div>
+          </div>
+
+          <div style="border-top:2px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <span style="font-weight:800;">Total</span>
+            <span id="checkout-total" style="font-size:1.4rem;font-weight:900;color:var(--green);">— DA</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-full" id="submitBtn" style="justify-content:center;">
+            <i class="fa-solid fa-lock"></i> Confirmer la livraison
+          </button>
+          <div style="text-align:center;margin-top:8px;font-size:.72rem;color:var(--text-lt);">
+            <i class="fa-solid fa-shield-halved me-1 txt-green"></i>Paiement 100% sécurisé
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let expiryCheckTimeout;
+let currentDeliveryType = 'home';
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateCheckoutTotal();
+  // Wire up time slot labels
+  document.querySelectorAll('.time-slot').forEach(slot => {
+    slot.addEventListener('click', () => selectTimeSlot(slot));
+  });
+  document.getElementById('checkoutForm').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Traitement...';
+    btn.disabled = true;
+  });
+});
+
+function selectDeliveryType(type) {
+  currentDeliveryType = type;
+  const homeCard  = document.getElementById('choiceHome');
+  const storeCard = document.getElementById('choiceStore');
+  const homeForm  = document.getElementById('homeDeliveryForm');
+  const pickup    = document.getElementById('storePickupForm');
+  const deliveryPriceEl = document.getElementById('delivery-price');
+  const deliveryDaysEl  = document.getElementById('delivery-days');
+
+  if (type === 'home') {
+    homeCard.classList.add('selected');
+    storeCard.classList.remove('selected');
+    homeForm.style.display = '';
+    pickup.style.display = 'none';
+    updateCheckoutTotal();
+  } else {
+    storeCard.classList.add('selected');
+    homeCard.classList.remove('selected');
+    homeForm.style.display = 'none';
+    pickup.style.display = '';
+    if (deliveryPriceEl) deliveryPriceEl.textContent = 'Gratuit';
+    if (deliveryPriceEl) deliveryPriceEl.style.color = 'var(--success)';
+    if (deliveryDaysEl)  deliveryDaysEl.textContent  = 'Immédiat';
+    const total = document.getElementById('checkout-subtotal');
+    const totalEl = document.getElementById('checkout-total');
+    if (total && totalEl) {
+      totalEl.textContent = Math.round(parseFloat(total.dataset.value)).toLocaleString('fr-DZ') + ' DA';
+    }
+  }
+}
+
+function selectTimeSlot(slot) {
+  document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+  slot.classList.add('selected');
+  const radio = slot.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+  updateCheckoutTotal();
+  checkExpiryLive();
+}
+
+async function checkExpiryLive() {
+  clearTimeout(expiryCheckTimeout);
+  expiryCheckTimeout = setTimeout(async () => {
+    const wilaya = document.getElementById('delivery-wilaya')?.value || '';
+    const method = document.querySelector('input[name="delivery_method"]:checked')?.value || 'standard';
+    if (!wilaya) return;
+    try {
+      const res  = await fetch(`/orders/check-expiry/?wilaya=${wilaya}&method=${method}`);
+      const data = await res.json();
+      const warn = document.getElementById('expiryWarning');
+      const txt  = document.getElementById('expiryWarningText');
+      if (data.has_conflicts) {
+        const names = data.conflicts.map(c => `${c.name} (expire ${c.expiry}, ≈${c.delivery_days}j)`).join(', ');
+        txt.textContent = `Ces produits risquent d'expirer avant livraison : ${names}`;
+        warn.style.display = 'block';
+      } else {
+        warn.style.display = 'none';
+      }
+    } catch(e) {}
+  }, 500);
+}
+
+function selectPayment(method) {
+  document.querySelectorAll('.payment-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.method === method);
+  });
+  const r = document.querySelector(`input[name="payment_method"][value="${method}"]`);
+  if (r) r.checked = true;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Catégories — FORSA{% endblock %}
+
+{% block catnav %}{% endblock %}
+
+{% block content %}
+
+<!-- ═══ CATEGORIES HERO ═══ -->
+<div class="categories-hero">
+  <div class="container-forsa">
+    <h1>Trouver les produits par catégories</h1>
+    <p>Explorez les offres selon le type de produit et trouvez rapidement les meilleures opportunités à prix réduit.</p>
+
+    <!-- Search + filter -->
+    <form method="get" action="{% url 'products:categories' %}">
+      {% if selected_cat %}<input type="hidden" name="category" value="{{ selected_cat }}">{% endif %}
+      <div class="cat-search-bar">
+        <div class="cat-search-input">
+          <input type="text" name="q" value="{{ q }}" placeholder="Rechercher un produit, une marque..." autocomplete="off" aria-label="Recherche">
+          <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+        <div class="cat-filter-select">
+          <i class="fa-solid fa-sliders" style="color:var(--green);"></i>
+          <span>Filtrer par catégorie</span>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ CATEGORY CHIP TABS ═══ -->
+<div style="background:var(--surface);border-bottom:1px solid var(--border);">
+  <div class="container-forsa">
+    <div class="cat-chips">
+      <a href="{% url 'products:categories' %}{% if q %}?q={{ q }}{% endif %}" class="cat-chip {% if not selected_cat %}active{% endif %}">
+        <i class="fa-solid fa-border-all"></i> Toutes
+      </a>
+      {% for cat in categories %}
+      <a href="{% url 'products:categories' %}?category={{ cat.slug }}{% if q %}&q={{ q }}{% endif %}" class="cat-chip {% if selected_cat == cat.slug %}active{% endif %}">
+        {{ cat.icon }} {{ cat.name }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="container-forsa" style="padding-top:24px;padding-bottom:52px;">
+  <div class="row g-4">
+
+    <!-- ═══ LEFT SIDEBAR FILTERS ═══ -->
+    <div class="col-lg-3">
+      <div style="position:sticky;top:72px;">
+
+        <!-- Filter by category (checkboxes) -->
+        <div class="filter-sidebar-box">
+          <div class="filter-sidebar-title">
+            <i class="fa-solid fa-border-all txt-green"></i> Filtrer par catégorie
+          </div>
+          <div class="filter-sidebar-body">
+            {% for cat in categories %}
+            <label class="filter-checkbox-row">
+              <input type="checkbox" {% if selected_cat == cat.slug %}checked{% endif %}
+                onchange="window.location.href='{% url 'products:categories' %}?category={{ cat.slug }}{% if q %}&q={{ q }}{% endif %}'">
+              <span class="filter-checkbox-label">{{ cat.icon }} {{ cat.name }}</span>
+              <span class="filter-checkbox-count">
+                {% for cwp in categories_with_products %}{% if cwp.category.slug == cat.slug %}{{ cwp.total }}{% endif %}{% endfor %}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Filter by other criteria -->
+        <div class="filter-sidebar-box">
+          <div class="filter-sidebar-title">
+            <i class="fa-solid fa-sliders txt-green"></i> Filtrer par
+          </div>
+          <div class="filter-collapsible">
+            <div class="filter-collapsible-header" onclick="toggleCollapse(this)">
+              <span><i class="fa-regular fa-calendar me-2"></i>Date d'expiration</span>
+              <i class="fa-solid fa-chevron-down" style="font-size:.7rem;transition:.2s;"></i>
+            </div>
+          </div>
+          <div class="filter-collapsible">
+            <div class="filter-collapsible-header" onclick="toggleCollapse(this)">
+              <span><i class="fa-solid fa-percent me-2"></i>Pourcentage de réduction</span>
+              <i class="fa-solid fa-chevron-down" style="font-size:.7rem;transition:.2s;"></i>
+            </div>
+          </div>
+          <div class="filter-collapsible">
+            <div class="filter-collapsible-header" onclick="toggleCollapse(this)">
+              <span><i class="fa-solid fa-tag me-2"></i>Prix</span>
+              <i class="fa-solid fa-chevron-down" style="font-size:.7rem;transition:.2s;"></i>
+            </div>
+          </div>
+          <div class="filter-collapsible">
+            <div class="filter-collapsible-header" onclick="toggleCollapse(this)">
+              <span><i class="fa-solid fa-industry me-2"></i>Marque</span>
+              <i class="fa-solid fa-chevron-down" style="font-size:.7rem;transition:.2s;"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reset filters -->
+        {% if selected_cat or q %}
+        <a href="{% url 'products:categories' %}" class="btn btn-outline btn-sm btn-full" style="justify-content:center;margin-top:4px;">
+          <i class="fa-solid fa-rotate"></i> Réinitialiser les filtres
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ═══ MAIN CONTENT: Products grouped by category ═══ -->
+    <div class="col-lg-9">
+      {% if categories_with_products %}
+        {% for item in categories_with_products %}
+        <!-- Category section -->
+        <div class="cat-section-heading">
+          <h2>
+            <span style="font-size:1.3rem;">{{ item.category.icon }}</span>
+            {{ item.category.name }}
+          </h2>
+          {% if item.total > 4 %}
+          <a href="{% url 'products:catalog' %}?category={{ item.category.slug }}" class="cat-section-voir-tout">
+            Voir tout <i class="fa-solid fa-arrow-right" style="font-size:.7rem;"></i>
+          </a>
+          {% endif %}
+        </div>
+
+        <div class="row g-3 mb-2">
+          {% for p in item.products %}
+          <div class="col-6 col-md-4 col-xl-3">
+            <div class="product-card" style="height:100%;">
+              <div class="product-img">
+                {% if p.images.first %}
+                  <img src="{{ p.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+                {% else %}
+                  <div class="product-img-placeholder">{{ p.category.icon|default:"📦" }}</div>
+                {% endif %}
+
+                <!-- Date courte badge -->
+                {% if p.days_until_expiry <= 30 %}
+                <span class="badge-date-courte">Date courte</span>
+                {% endif %}
+
+                <!-- Discount badge -->
+                {% if p.discount_pct > 0 %}
+                <span class="badge-discount" style="top:10px;right:10px;">-{{ p.discount_pct|floatformat:0 }}%</span>
+                {% endif %}
+
+                {% if user.is_customer %}
+                <button class="product-wishlist" onclick="toggleWishlist(this,'{{ p.pk }}')" aria-label="Favoris">
+                  <i class="fa-regular fa-heart"></i>
+                </button>
+                {% endif %}
+              </div>
+              <div class="product-body">
+                <!-- Store / brand -->
+                <a href="{% url 'stores:detail' p.store.slug %}" class="product-vendor">
+                  <i class="fa-solid fa-shop"></i> {{ p.store.name }}
+                </a>
+                <!-- Product name -->
+                <a href="{% url 'products:detail' p.slug %}" class="product-name" style="color:inherit;">{{ p.name }}</a>
+                <!-- Prices -->
+                <div class="product-prices">
+                  <span class="price-now">{{ p.current_price|floatformat:3 }} DA</span>
+                  {% if p.discount_pct > 0 %}<span class="price-old">{{ p.original_price|floatformat:0 }}</span>{% endif %}
+                </div>
+                <!-- Expiry -->
+                <div style="font-size:.7rem;color:var(--text-lt);margin-bottom:8px;display:flex;align-items:center;gap:3px;">
+                  <i class="fa-regular fa-clock"></i>
+                  Expire le {{ p.expiry_date|date:"d/m/Y" }}
+                </div>
+                <!-- Store + location -->
+                <div style="font-size:.72rem;color:var(--text-lt);margin-bottom:10px;display:flex;align-items:center;gap:4px;">
+                  <i class="fa-solid fa-location-dot txt-green"></i>
+                  {{ p.store.name }} — {{ p.store.wilaya }}
+                </div>
+                <!-- Action -->
+                <a href="{% url 'products:detail' p.slug %}" class="btn btn-primary btn-sm btn-full" style="justify-content:center;">
+                  <i class="fa-solid fa-eye"></i> Voir l'offre
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+
+      {% else %}
+      <!-- Empty state -->
+      <div style="text-align:center;padding:72px 24px;background:var(--surface);border-radius:var(--r-16);border:2px dashed var(--border);">
+        <div style="font-size:3.5rem;margin-bottom:14px;">🔍</div>
+        <h4 style="font-weight:800;margin-bottom:8px;">Aucun produit trouvé</h4>
+        <p style="color:var(--text-lt);max-width:380px;margin:0 auto 20px;">
+          {% if q %}Aucun résultat pour "{{ q }}". {% endif %}Essayez d'autres filtres.
+        </p>
+        <a href="{% url 'products:categories' %}" class="btn btn-primary btn-md">
+          <i class="fa-solid fa-rotate"></i> Voir toutes les catégories
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCollapse(header) {
+  const icon = header.querySelector('.fa-chevron-down');
+  if (icon) icon.style.transform = icon.style.transform === 'rotate(180deg)' ? '' : 'rotate(180deg)';
+}
+</script>
+{% endblock %}

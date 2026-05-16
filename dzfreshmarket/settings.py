@@ -22,6 +22,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
+_cloudinary_url = config("CLOUDINARY_URL", default=None)
+_use_cloudinary = bool(_cloudinary_url and _cloudinary_url.startswith("cloudinary://"))
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -29,8 +32,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "cloudinary_storage",
-    "cloudinary",
+    *( ["cloudinary_storage", "cloudinary"] if _use_cloudinary else [] ),
     "crispy_forms",
     "crispy_bootstrap5",
     "widget_tweaks",
@@ -90,9 +92,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Use Cloudinary for uploaded media files when CLOUDINARY_URL is set (production)
-_cloudinary_url = config("CLOUDINARY_URL", default=None)
-if _cloudinary_url:
+if _use_cloudinary:
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"

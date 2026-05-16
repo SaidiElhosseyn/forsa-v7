@@ -87,12 +87,22 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-if _use_cloudinary:
-    DEFAULT_FILE_STORAGE = "dzfreshmarket.cloudinary_storage.CloudinaryStorage"
+# Django 5.x requires STORAGES dict (DEFAULT_FILE_STORAGE was removed in 5.1)
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "dzfreshmarket.cloudinary_storage.CloudinaryStorage"
+            if _use_cloudinary else
+            "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

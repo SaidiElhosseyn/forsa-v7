@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    *( ["cloudinary_storage", "cloudinary"] if _use_cloudinary else [] ),
     "crispy_forms",
     "crispy_bootstrap5",
     "widget_tweaks",
@@ -93,7 +92,7 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 if _use_cloudinary:
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    DEFAULT_FILE_STORAGE = "dzfreshmarket.cloudinary_storage.CloudinaryStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

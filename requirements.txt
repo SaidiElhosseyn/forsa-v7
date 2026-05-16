@@ -17,7 +17,6 @@ python-slugify==8.0.4
 # Images & cloud media storage
 Pillow==12.2.0
 cloudinary==1.42.1
-django-cloudinary-storage==0.3.0
 
 # Django internals
 asgiref==3.11.1

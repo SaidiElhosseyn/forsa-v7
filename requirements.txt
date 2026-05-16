@@ -14,8 +14,10 @@ django-widget-tweaks==1.5.1
 python-decouple==3.8
 python-slugify==8.0.4
 
-# Images
+# Images & cloud media storage
 Pillow==12.2.0
+cloudinary==1.42.1
+django-cloudinary-storage==0.3.0
 
 # Django internals
 asgiref==3.11.1

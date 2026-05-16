@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "cloudinary_storage",
+    "cloudinary",
     "crispy_forms",
     "crispy_bootstrap5",
     "widget_tweaks",
@@ -87,6 +89,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Use Cloudinary for uploaded media files when CLOUDINARY_URL is set (production)
+_cloudinary_url = config("CLOUDINARY_URL", default=None)
+if _cloudinary_url:
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

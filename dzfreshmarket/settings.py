@@ -68,7 +68,9 @@ WSGI_APPLICATION = "dzfreshmarket.wsgi.application"
 # Use PostgreSQL on Railway (DATABASE_URL set automatically), SQLite locally
 _db_url = config("DATABASE_URL", default=None)
 if _db_url:
-    DATABASES = {"default": dj_database_url.parse(_db_url, conn_max_age=600, ssl_require=True)}
+    _db_config = dj_database_url.parse(_db_url, conn_max_age=60, ssl_require=True)
+    _db_config["CONN_HEALTH_CHECKS"] = True
+    DATABASES = {"default": _db_config}
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 

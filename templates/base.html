@@ -267,11 +267,9 @@
         <div class="mobile-nav-title">Catégories</div>
         <a href="{% url 'products:catalog' %}?category=cosmetiques-beaute"  class="mobile-nav-link">💄 Cosmétiques & Beauté</a>
         <a href="{% url 'products:catalog' %}?category=sante-pharmacie"     class="mobile-nav-link">💊 Santé & Pharmacie</a>
-        <a href="{% url 'products:catalog' %}?category=hygiene-soins"       class="mobile-nav-link">🧴 Hygiène & Soins</a>
-        <a href="{% url 'products:catalog' %}?category=animalerie"          class="mobile-nav-link">🐾 Animalerie</a>
-        <a href="{% url 'products:catalog' %}?category=mode-textile"        class="mobile-nav-link">👗 Mode & Textile</a>
-        <a href="{% url 'products:catalog' %}?category=bio-naturel"         class="mobile-nav-link">🌿 Bio & Naturel</a>
-        <a href="{% url 'products:catalog' %}?category=sport-bien-etre"     class="mobile-nav-link">🏋️ Sport</a>
+        <a href="{% url 'products:catalog' %}?category=hygiene-soins"       class="mobile-nav-link">🧴 Parapharmacie</a>
+        <a href="{% url 'products:catalog' %}?category=animalerie"          class="mobile-nav-link">🐾 Supermarché / Alimentation</a>
+
       </div>
 
       {% if user.is_authenticated %}
@@ -316,10 +314,10 @@
       <!-- Catégories -->
       <div class="col-lg-2 col-6">
         <div class="footer-heading">Catégories</div>
-        <a href="{% url 'products:catalog' %}?category=cosmetiques-beaute" class="footer-link">💄 Cosmétiques</a>
-        <a href="{% url 'products:catalog' %}?category=sante-pharmacie"    class="footer-link">💊 Santé</a>
-        <a href="{% url 'products:catalog' %}?category=mode-textile"       class="footer-link">👗 Mode</a>
-        <a href="{% url 'products:catalog' %}?category=sport-bien-etre"    class="footer-link">🏋️ Sport</a>
+        <a href="{% url 'products:catalog' %}?category=cosmetiques-beaute" class="mobile-nav-link">💄 Cosmétiques & Beauté</a>
+        <a href="{% url 'products:catalog' %}?category=sante-pharmacie"    class="mobile-nav-link">💊 Santé & Pharmacie</a>
+        <a href="{% url 'products:catalog' %}?category=mode-textile"       class="mobile-nav-link">🧴 Parapharmacie</a>
+        <a href="{% url 'products:catalog' %}?category=sport-bien-etre"    class="mobile-nav-link">🐾 Supermarché / Alimentation</a>
       </div>
 
       <!-- Marketplace -->
